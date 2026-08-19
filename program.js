@@ -1,0 +1,54 @@
+/* The program. Edit here, everything else follows. ------------------------ */
+"use strict";
+
+/* Movements. `work` is the estimated seconds the set itself takes — it seeds the
+   clock, and your recalibrate taps correct it. `hold` marks isometric work that
+   is measured in seconds instead of reps. */
+const M = {
+  press:    {short:"KB press",      name:"Half-kneeling one-arm kettlebell press", reps:"6–8",   lo:6,  hi:8,  side:"each arm", load:"16 kg",     work:60, def:7,  cue:"Same-side knee down. Ribs down. Press straight up, bicep by your ear."},
+  lateral:  {short:"Lateral raise", name:"Lateral raise",                          reps:"12–15", lo:12, hi:15, side:"",         load:"dumbbells", work:40, def:13, cue:"Lead with the elbows. Stop at shoulder height. No swinging."},
+  reardelt: {short:"Rear delt",     name:"Bent-over rear delt raise",              reps:"15",    lo:15, hi:15, side:"",         load:"dumbbells", work:40, def:15, cue:"Hinge to ~45°. Open like a curtain. Feel it behind the shoulder, not the neck."},
+  curl:     {short:"KB curl",       name:"Kettlebell curl, one arm",               reps:"8–10",  lo:8,  hi:10, side:"each arm", load:"16 kg",     work:45, def:9,  cue:"Hold one horn so the bell sits outside your wrist. Elbow pinned."},
+  ohext:    {short:"OH extension",  name:"Overhead kettlebell extension",          reps:"10–12", lo:10, hi:12, side:"",         load:"16 kg",     work:40, def:11, cue:"Cup the ball, handle down your back. Elbows forward, close together."},
+  pushup:   {short:"Push-ups",      name:"Feet-elevated push-ups on parallettes",  reps:"8–15",  lo:8,  hi:15, side:"",         load:"bodyweight",work:45, def:11, cue:"Feet on the ~12in step. Handles in a shallow V. Elbows 45° from your ribs."},
+  swing:    {short:"KB swings",     name:"Kettlebell swings",                      reps:"20",    lo:20, hi:20, side:"",         load:"16 kg",     work:45, def:20, cue:"Hips, not arms. Hike it back, snap the hips, let it float. Back stays flat."},
+
+  doorpress:{short:"Doorframe push",name:"Doorframe overhead press-up",            reps:"4 × 3s",lo:4,  hi:4,  side:"",         load:"max effort",work:32, def:4,  hold:true, cue:"Hands under the top of the frame. Push like you're lifting the house. 3s on, 5s off, four times."},
+  tablecurl:{short:"Under-table",   name:"Under-table curl press",                 reps:"4 × 3s",lo:4,  hi:4,  side:"",         load:"max effort",work:32, def:4,  hold:true, cue:"Palms up under a heavy tabletop, elbows ~90°. Drive up hard for 3s."},
+  tablepush:{short:"Table press",   name:"Top-of-table press-down",                reps:"4 × 3s",lo:4,  hi:4,  side:"",         load:"max effort",work:32, def:4,  hold:true, cue:"Palms down on top, elbows ~90°. Press down hard for 3s."},
+  splitsq:  {short:"Split squat",   name:"Split-squat hold",                       reps:"30s",   lo:30, hi:30, side:"each leg", load:"bodyweight",work:70, def:30, hold:true, cue:"Long stride, front thigh parallel, back knee a few inches off the floor. Hand on a wall is fine."}
+};
+
+/* The week. 0 = Sunday, matching JS getDay(). */
+const WEEK = {
+  1: {name:"Press A",   tag:"hard",  note:"Volleyball tonight. A set of the press is both arms — left, put it down, right, then rest.",
+      blocks:[{m:"press",sets:3,rest:90},{m:"lateral",sets:3,rest:45},{m:"reardelt",sets:2,rest:40}]},
+  2: {name:"Arms",      tag:"mod",   note:"Late night behind you. Nothing here taxes your nervous system. Stretch the rests if you need to.",
+      blocks:[{m:"curl",sets:4,rest:60},{m:"ohext",sets:3,rest:60},{m:"reardelt",sets:2,rest:40}]},
+  3: {name:"Chest",     tag:"hard",  note:"Volleyball tonight. If you clear 15 push-ups, raise the feet or put the vest on.",
+      blocks:[{m:"pushup",sets:4,rest:75},{m:"lateral",sets:3,rest:45},{m:"swing",sets:1,rest:0}]},
+  4: {name:"Delts only",tag:"light", note:"Climbing tonight. Nothing that loads elbow or grip. Nine minutes and out.",
+      blocks:[{m:"lateral",sets:4,rest:45},{m:"reardelt",sets:3,rest:40}]},
+  5: {name:"Press B",   tag:"hard",  note:"Same press as Monday, tracked separately — you'll progress on one before the other.",
+      blocks:[{m:"press",sets:3,rest:90},{m:"curl",sets:3,rest:60},{m:"ohext",sets:2,rest:60}]},
+  6: {name:"Tendon · shoulder & knee", tag:"tendon", note:"Boring on purpose. Push the furniture as hard as you can — nothing moves, so there's no risk in going all out.",
+      blocks:[{m:"doorpress",sets:3,rest:60},{m:"splitsq",sets:3,rest:45}]},
+  0: {name:"Tendon · elbow",           tag:"tendon", note:"Same idea, elbows today. Then one set of swings and you're done for the week.",
+      blocks:[{m:"tablecurl",sets:3,rest:60},{m:"tablepush",sets:3,rest:60},{m:"swing",sets:1,rest:0}]}
+};
+
+/* Weeks 1–2 hold you back on purpose: 3–4 reps in reserve, no vest, no progression. */
+const ONRAMP_DAYS = 14;
+
+function buildPhases(dayKey){
+  const day = WEEK[dayKey], ph = [];
+  day.blocks.forEach((b, bi) => {
+    for(let s=1; s<=b.sets; s++){
+      ph.push({type:"work", m:b.m, bi, set:s, sets:b.sets, dur:M[b.m].work});
+      const isLast = (bi === day.blocks.length-1) && (s === b.sets);
+      if(!isLast && b.rest > 0) ph.push({type:"rest", m:b.m, bi, set:s, sets:b.sets, dur:b.rest});
+      else if(!isLast) ph.push({type:"rest", m:b.m, bi, set:s, sets:b.sets, dur:20});
+    }
+  });
+  return ph;
+}

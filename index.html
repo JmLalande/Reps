@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#33150A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Reps</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#33150A; --ink:#FFE9DA; --mut:#C79173; --acc:#FF8A4C; --field:#3D1A0C;
+  --shell:#0B0D0F; --card:#14171B; --card2:#1A1E23; --line:#242A31; --dim:#7E8892; --pale:#F2F4F6;
+  --teal:#54DFC3; --amber:#FFC46B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--shell);color:var(--pale);font-family:Barlow,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+input,select{font:inherit;color:inherit;background:var(--card2);border:1px solid var(--line);
+  border-radius:10px;padding:.6rem .7rem}
+:focus-visible{outline:3px solid #9FE3FF;outline-offset:-3px}
+h1,h2,h3{font-family:Oswald,sans-serif;font-weight:400;letter-spacing:.005em}
+.mono{font-variant-numeric:tabular-nums}
+
+/* ---------- shell ---------- */
+.shell{max-width:520px;margin:0 auto;padding:26px 20px calc(96px + env(safe-area-inset-bottom));min-height:100dvh}
+.page{display:none}.page.on{display:block}
+.kick{font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 18px;margin-top:14px}
+.card h3{font-size:19px;margin-bottom:4px}
+.muted{color:var(--dim);font-size:14px;line-height:1.55}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+
+nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(11,13,15,.94);
+  backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+nav .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav button{padding:8px 4px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  font-weight:600;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:5px}
+nav button.on{color:var(--acc)}
+nav svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- today ---------- */
+.hero{padding:4px 0 2px}
+.hero .d{font-family:Oswald,sans-serif;font-size:34px;line-height:1.1;margin-top:6px}
+.streakbar{display:flex;align-items:center;gap:14px;margin-top:18px}
+.streakN{font-family:Oswald,sans-serif;font-weight:700;font-size:58px;line-height:.9;color:var(--acc);
+  font-variant-numeric:tabular-nums}
+.streakL{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.mstone{margin-top:14px;border-left:3px solid var(--acc);padding-left:14px;font-size:15.5px;line-height:1.55}
+.tease{margin-top:9px;font-size:13px;color:var(--dim);font-style:italic}
+.go{display:block;width:100%;margin-top:22px;background:var(--acc);color:#26120A;border-radius:16px;
+  padding:22px;font-family:Oswald,sans-serif;font-size:26px;letter-spacing:.01em}
+.go.small{background:var(--card2);color:var(--pale);font-size:17px;padding:15px}
+.go[disabled]{opacity:.45}
+.plan{margin-top:4px}
+.plan li{list-style:none;display:flex;justify-content:space-between;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--line);font-size:14.5px}
+.plan li:last-child{border-bottom:0}
+.plan .s{color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.badge{display:inline-block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+  padding:3px 8px;border-radius:5px;color:#12151A;background:var(--acc);vertical-align:2px}
+.badge.tendon{background:#C4A7E7}.badge.light{background:var(--teal)}.badge.mod{background:var(--amber)}
+.onramp{margin-top:12px;border-left:3px solid var(--amber);padding-left:13px;font-size:13.5px;color:var(--dim)}
+.onramp b{color:var(--amber)}
+.nudge{margin-top:12px;border-left:3px solid var(--teal);padding-left:13px;font-size:13.5px;color:var(--dim)}
+.nudge b{color:var(--teal)}
+
+/* ---------- session (the field) ---------- */
+.sess{position:fixed;inset:0;z-index:60;display:none;background:#050506;
+  align-items:center;justify-content:center}
+.sess.on{display:flex}
+.app{position:relative;width:min(100%,480px);height:100dvh;overflow:hidden;
+  background:var(--bg);transition:background .45s ease}
+@media(min-width:540px) and (min-height:720px){.app{height:min(100dvh,880px);border-radius:24px}}
+.ring{position:absolute;inset:0;pointer-events:none;z-index:3}
+.ring rect{fill:none;stroke:var(--acc);stroke-width:5;transition:stroke .45s ease}
+.ring rect.track{stroke:rgba(255,255,255,.09)}
+.ring.over rect.bar{stroke:#FF5C5C;animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.35}}
+.status{position:absolute;top:0;left:0;right:0;z-index:4;display:flex;justify-content:space-between;
+  align-items:center;padding:calc(16px + env(safe-area-inset-top)) 20px 18px;pointer-events:none}
+.status .st{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut);
+  display:flex;align-items:baseline;gap:6px}
+.status .st b{font-family:Oswald,sans-serif;font-weight:500;font-size:16px;color:var(--ink)}
+.iconbtn{pointer-events:auto;width:42px;height:42px;display:grid;place-items:center;border-radius:11px;color:var(--mut)}
+.iconbtn[aria-pressed="false"]{opacity:.38}
+.iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.field{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:78px 22px 104px;text-align:center;width:100%}
+.phase{font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.exname{font-family:Oswald,sans-serif;font-size:27px;line-height:1.08;margin-top:10px;max-width:19ch;color:var(--ink)}
+.pips{display:flex;gap:6px;justify-content:center;margin-top:12px}
+.pips i{display:block;width:26px;height:4px;border-radius:2px;background:rgba(255,255,255,.16)}
+.pips i.done{background:var(--mut)}.pips i.cur{background:var(--acc)}
+.big{font-family:Oswald,sans-serif;font-weight:700;font-variant-numeric:tabular-nums;
+  font-size:clamp(112px,42vw,168px);line-height:.86;margin:14px 0 6px;color:var(--ink)}
+.big.over{color:#FF9C9C}
+.big.wide{font-size:clamp(68px,27vw,116px)}
+.target{font-size:17px;color:var(--mut)}.target b{color:var(--ink);font-weight:600}
+.deltaline{height:26px;margin-top:14px;font-size:14.5px;color:var(--acc);opacity:0;transition:opacity .2s;
+  font-variant-numeric:tabular-nums}
+.deltaline.on{opacity:1}
+.foot{position:absolute;left:0;right:0;bottom:0;z-index:2;
+  padding:0 22px calc(26px + env(safe-area-inset-bottom));text-align:center;pointer-events:none}
+.upnext{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.upnext span{display:block;font-family:Oswald,sans-serif;font-size:19px;text-transform:none;color:var(--ink);margin-top:3px}
+.hint{margin-top:14px;font-size:13.5px;color:var(--mut)}
+.hint b{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+.cue{margin-top:10px;font-size:12.5px;color:var(--mut);opacity:.75;max-width:34ch;margin-left:auto;margin-right:auto;line-height:1.45}
+
+/* log takeover */
+.log{position:absolute;inset:0;z-index:6;background:#101215;display:flex;flex-direction:column;
+  padding:calc(20px + env(safe-area-inset-top)) 20px calc(22px + env(safe-area-inset-bottom));
+  opacity:0;visibility:hidden;transition:opacity .18s,visibility .18s}
+.log.on{opacity:1;visibility:visible}
+.log .top{display:flex;justify-content:space-between;align-items:baseline}
+.log .top .t{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.log .top .r{font-family:Oswald,sans-serif;font-size:18px;color:var(--teal);font-variant-numeric:tabular-nums}
+.log h2{font-size:25px;margin-top:6px;line-height:1.12}
+.prtag{display:none;margin-top:8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:700;color:var(--amber)}
+.prtag.on{display:block}
+.repbox{display:flex;align-items:stretch;gap:12px;margin:auto 0 0;height:min(42vh,300px);min-height:0}
+.repbox .pad{flex:0 0 104px;border-radius:16px;background:var(--card2);display:grid;place-items:center;
+  font-family:Oswald,sans-serif;font-size:58px;color:var(--pale)}
+.repbox .pad:active{background:#2A3138}
+.repbox .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
+.repbox .mid b{font-family:Oswald,sans-serif;font-weight:700;font-size:clamp(72px,22vw,112px);line-height:.9;
+  font-variant-numeric:tabular-nums}
+.repbox .mid span{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);
+  font-weight:600;margin-top:6px}
+.rirlbl{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:600;margin:20px 0 9px}
+.rir{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.rir button{height:84px;border-radius:14px;background:var(--card2);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px}
+.rir button:active{background:var(--acc);color:#12151A}
+.rir b{font-family:Oswald,sans-serif;font-weight:500;font-size:29px}
+.rir i{font-style:normal;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.rir button:active i{color:#12151A}
+
+/* done */
+.doneview{position:absolute;inset:0;z-index:7;background:#0B0D0F;display:none;flex-direction:column;
+  justify-content:center;padding:0 26px}
+.doneview.on{display:flex}
+.doneview .big2{font-family:Oswald,sans-serif;font-weight:700;font-size:76px;line-height:.92;margin-top:8px;
+  font-variant-numeric:tabular-nums}
+.doneview p{color:#9AA3AB;margin-top:12px;font-size:16.5px;line-height:1.5}
+.doneview .ms{margin-top:20px;border-left:3px solid var(--acc);padding-left:14px;font-size:15.5px;line-height:1.55;color:var(--pale)}
+
+/* ---------- calendar ---------- */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px}
+.cal .h{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);text-align:center;font-weight:600}
+.cal .c{aspect-ratio:1;border-radius:7px;background:#161A1F;display:grid;place-items:center;
+  font-size:11.5px;color:#4E5760;font-variant-numeric:tabular-nums}
+.cal .c.done{background:var(--acc);color:#26120A;font-weight:600}
+.cal .c.part{background:#7A4526;color:#FFE3D0}
+.cal .c.miss{background:#241417;color:#7A4550}
+.cal .c.future{opacity:.35}
+.cal .c.today{box-shadow:0 0 0 2px var(--teal)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--dim)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* ---------- stats ---------- */
+.stat{display:flex;justify-content:space-between;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line)}
+.stat:last-child{border-bottom:0}
+.stat .v{font-family:Oswald,sans-serif;font-size:21px;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:12px;color:var(--dim);font-family:Barlow,sans-serif}
+.bars{display:flex;align-items:flex-end;gap:3px;height:64px;margin-top:12px}
+.bars i{flex:1;background:var(--acc);border-radius:2px;min-height:2px;opacity:.85}
+.spark{display:flex;align-items:flex-end;gap:2px;height:44px;margin-top:10px}
+.spark i{flex:1;background:var(--teal);border-radius:2px;min-height:2px}
+.toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--pale);color:#12151A;
+  padding:11px 18px;border-radius:11px;font-size:14px;font-weight:600;z-index:80;opacity:0;
+  transition:opacity .2s;pointer-events:none;max-width:88vw;text-align:center}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<!-- ============ SESSION ============ -->
+<div class="sess" id="sess">
+  <div class="app" id="app">
+    <svg class="ring" id="ring" aria-hidden="true"><rect class="track"></rect><rect class="bar"></rect></svg>
+    <div class="status">
+      <span class="st">Day <b id="sStreak">0</b> streak</span>
+      <span style="display:flex;pointer-events:auto">
+        <button class="iconbtn" id="sndBtn" aria-pressed="true" aria-label="Sound">
+          <svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg></button>
+        <button class="iconbtn" id="quitBtn" aria-label="Leave session">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </span>
+    </div>
+    <button class="field" id="field">
+      <span class="phase" id="phaseLbl">Working</span>
+      <span class="exname" id="exName">—</span>
+      <span class="pips" id="pips"></span>
+      <span class="big mono" id="clock">0:00</span>
+      <span class="target" id="target"></span>
+      <span class="cue" id="cueLine"></span>
+      <span class="deltaline mono" id="delta"></span>
+    </button>
+    <div class="foot">
+      <div class="upnext">Up next<span id="nextLbl">—</span></div>
+      <div class="hint" id="hint">Tap anywhere when the set is done · ends <b id="endAt">—</b></div>
+    </div>
+
+    <div class="log" id="log" aria-hidden="true">
+      <div class="top"><span class="t" id="logWho">Log the set</span><span class="r mono" id="logRest">0:00</span></div>
+      <h2 id="logName">—</h2>
+      <div class="prtag" id="prTag">Personal record</div>
+      <div class="repbox">
+        <button class="pad" id="repMinus" aria-label="One fewer">−</button>
+        <div class="mid"><b class="mono" id="repVal">0</b><span id="repUnit">reps</span></div>
+        <button class="pad" id="repPlus" aria-label="One more">+</button>
+      </div>
+      <div class="rirlbl">Reps left in the tank</div>
+      <div class="rir" id="rir"></div>
+    </div>
+
+    <div class="doneview" id="doneview">
+      <span class="kick">Session complete</span>
+      <div class="big2 mono" id="doneTime">0:00</div>
+      <p id="doneNote"></p>
+      <div class="ms" id="doneMs"></div>
+      <button class="go" id="doneBtn" style="margin-top:26px">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SHELL ============ -->
+<div class="shell">
+
+  <!-- TODAY -->
+  <section class="page on" id="p-today">
+    <div class="hero">
+      <span class="kick" id="todayDate">—</span>
+      <div class="d" id="todayName">—</div>
+    </div>
+    <div class="streakbar">
+      <span class="streakN mono" id="streakN">0</span>
+      <span class="streakL">day<br>streak</span>
+    </div>
+    <div class="mstone" id="mstone">—</div>
+    <div class="tease" id="tease"></div>
+    <div class="onramp" id="onramp" style="display:none"></div>
+    <div class="nudge" id="nudge" style="display:none"></div>
+    <button class="go" id="startBtn">Start session</button>
+    <div class="card">
+      <h3 id="planTitle">Today</h3>
+      <p class="muted" id="planNote"></p>
+      <ul class="plan" id="planList"></ul>
+    </div>
+  </section>
+
+  <!-- ROUTINE -->
+  <section class="page" id="p-routine">
+    <span class="kick">The week</span>
+    <h1 style="font-size:30px;margin:6px 0 4px">Routine</h1>
+    <p class="muted">Volleyball Monday and Wednesday, climbing Thursday. Fifteen minutes, three movements, never more.</p>
+    <div id="routineList"></div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="page" id="p-history">
+    <span class="kick">Every day</span>
+    <h1 style="font-size:30px;margin:6px 0 4px">History</h1>
+    <div class="card">
+      <div class="row"><h3 id="calMonth">—</h3>
+        <span><button class="go small" id="calPrev" style="display:inline-block;width:auto;margin:0;padding:6px 12px">←</button>
+        <button class="go small" id="calNext" style="display:inline-block;width:auto;margin:0;padding:6px 12px">→</button></span></div>
+      <div class="cal" id="cal"></div>
+      <div class="legend">
+        <span><i style="background:var(--acc)"></i>Full session</span>
+        <span><i style="background:#7A4526"></i>Partial, streak alive</span>
+        <span><i style="background:#241417"></i>Missed</span>
+      </div>
+    </div>
+    <div class="card"><h3>Recent sessions</h3><div id="recent"></div></div>
+  </section>
+
+  <!-- STATS -->
+  <section class="page" id="p-stats">
+    <span class="kick">The numbers</span>
+    <h1 style="font-size:30px;margin:6px 0 4px">Progress</h1>
+    <div class="card" id="retroCard" style="display:none">
+      <h3>Then and now</h3><div id="retro"></div>
+    </div>
+    <div class="card"><h3>Personal records</h3><div id="prs"></div></div>
+    <div class="card"><h3>When you train</h3>
+      <p class="muted">Each bar is an hour of the day.</p>
+      <div class="bars" id="hourBars"></div>
+      <div class="muted mono" id="hourNote" style="margin-top:8px"></div></div>
+    <div class="card"><h3>Session length</h3>
+      <p class="muted">Real minutes against the fifteen it claims.</p>
+      <div class="spark" id="lenSpark"></div>
+      <div class="muted mono" id="lenNote" style="margin-top:8px"></div></div>
+    <div class="card"><h3>Bodyweight</h3>
+      <p class="muted">One number, once a week. Not trending up over a month means eat more.</p>
+      <div class="spark" id="wtSpark"></div>
+      <div class="row" style="margin-top:12px">
+        <input type="number" id="wtIn" step="0.1" placeholder="lb" style="flex:1">
+        <button class="go small" id="wtSave" style="width:auto;margin:0;padding:11px 18px">Save</button></div>
+      <div class="muted mono" id="wtNote" style="margin-top:8px"></div></div>
+    <div class="card"><h3>Your data</h3>
+      <p class="muted">It lives in this browser only. Clear the site data and it is gone — export now and then.</p>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="go small" id="expBtn" style="margin:0">Export</button>
+        <button class="go small" id="impBtn" style="margin:0">Import</button></div>
+      <input type="file" id="impFile" accept="application/json" style="display:none"></div>
+  </section>
+</div>
+
+<nav><div class="in">
+  <button class="on" data-go="today"><svg viewBox="0 0 24 24"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Today</button>
+  <button data-go="routine"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Routine</button>
+  <button data-go="history"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>History</button>
+  <button data-go="stats"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Progress</button>
+</div></nav>
+
+<div class="toast" id="toast"></div>
+
+<script src="./program.js"></script>
+<script src="./milestones.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
