@@ -282,8 +282,8 @@ function render(){
   setPips(show.sets,show.set);
   $("target").innerHTML="<b>"+sm.reps+"</b>"+(sm.side?" "+sm.side:(sm.hold?"":" reps"))+" · <b>"+sm.load+"</b>";
   $("nextLbl").textContent=work
-    ?(PH[idx+1]?"Rest "+fmt(PH[idx+1].dur)+(nextW?", then "+M[nextW.m].short+" "+nextW.set:""):"Last set")
-    :(nextW?M[nextW.m].short+" set "+nextW.set:"Session ends");
+    ?(PH[idx+1]?"Rest "+fmt(PH[idx+1].dur)+(nextW?", then "+M[nextW.m].short+" · Set "+nextW.set:""):"Last set")
+    :(nextW?M[nextW.m].short+" · Set "+nextW.set:"Session ends");
   const end=new Date(Date.now()+remaining()*1000);
   $("endAt").textContent=String(end.getHours()).padStart(2,"0")+":"+String(end.getMinutes()).padStart(2,"0");
   const green=Object.keys(SESSIONS).length<4;
@@ -297,7 +297,7 @@ function render(){
 function endWork(){
   const p=PH[idx],delta=el-p.dur;
   p.actual=el;drift+=delta;flashDelta(delta);
-  pendingWork={m:p.m,set:p.set};
+  pendingWork={m:p.m,set:p.set,sets:p.sets};
   idx++;el=0;
   if(idx>=PH.length){finishing=true;openLog();tone(520,.14,.06);return;}
   holding=true;openLog();tone(520,.14,.06);render();
@@ -312,14 +312,14 @@ function openLog(){
   repVal=m.def;
   $("repVal").textContent=repVal;
   $("repUnit").textContent=m.hold?"seconds":(m.side?"reps / side":"reps");
-  $("logWho").textContent="Set "+pendingWork.set;
   $("logName").textContent=m.name;
+  $("logSet").textContent="Set "+pendingWork.set+" of "+pendingWork.sets;
   const pr=prFor(pendingWork.m);
   $("prTag").classList.remove("on");
   const rir=$("rir");rir.innerHTML="";
   for(let n=0;n<=4;n++){
     const b=document.createElement("button");
-    b.innerHTML="<b>"+n+"</b><i>"+(n===0?"none":(n===4?"4+":"&nbsp;"))+"</i>";
+    b.innerHTML="<b>"+(n===4?"4+":n)+"</b>";
     b.setAttribute("aria-label",n+" reps in reserve");
     b.addEventListener("click",()=>commitLog(n));
     rir.appendChild(b);

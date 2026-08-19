@@ -153,7 +153,8 @@ details.cue b{color:var(--pale);font-weight:500}
 .log .top{display:flex;justify-content:space-between;align-items:baseline}
 .log .top .t{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:500}
 .log .top .r{font-size:16px;color:var(--teal);font-variant-numeric:tabular-nums;font-weight:500}
-.log h2{font-size:24px;margin-top:8px;line-height:1.16;font-weight:600;letter-spacing:-.024em}
+.log h2{font-size:24px;margin-top:10px;line-height:1.16;font-weight:600;letter-spacing:-.024em}
+.log .setline{font-size:24px;line-height:1.16;font-weight:600;letter-spacing:-.024em;color:var(--pale);margin-top:2px}
 .prtag{display:none;margin-top:10px;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
   font-weight:600;color:var(--amber)}
 .prtag.on{display:block}
@@ -171,12 +172,10 @@ details.cue b{color:var(--pale);font-weight:500}
   font-weight:500;margin:24px 0 11px}
 .rir{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
 .rir button{height:82px;border-radius:20px;background:var(--panel);border:1px solid var(--line);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  display:grid;place-items:center;
   transition:background .16s ease,transform .16s ease}
 .rir button:active{background:var(--pale);color:#0A0B0C;transform:scale(.97)}
 .rir b{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
-.rir i{font-style:normal;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:500}
-.rir button:active i{color:#0A0B0C}
 
 /* done */
 .doneview{position:absolute;inset:0;z-index:7;background:#08090A;display:none;flex-direction:column;
@@ -247,8 +246,9 @@ details.cue b{color:var(--pale);font-weight:500}
     </div>
 
     <div class="log" id="log" aria-hidden="true">
-      <div class="top"><span class="t" id="logWho">Log the set</span><span class="r mono" id="logRest">0:00</span></div>
+      <div class="top"><span class="t">Logging</span><span class="r mono" id="logRest">0:00</span></div>
       <h2 id="logName">—</h2>
+      <div class="setline" id="logSet"></div>
       <div class="prtag" id="prTag">Personal record</div>
       <div class="repbox">
         <button class="pad" id="repMinus" aria-label="One fewer">−</button>
