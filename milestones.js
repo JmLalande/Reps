@@ -31,12 +31,12 @@ const DAYS = {
   25: "The longest anyone has held their breath is 24 minutes 37 seconds. You have been at this about 1,400 times longer.",
   26: "Krakatoa erupted in 1883 loud enough to be heard 4,800 km away, and burst the eardrums of sailors 64 km out.",
   27: "The Moon has completed one full orbit of Earth since you started. It takes 27.3 days.",
-  28: "The Sun has rotated once at its equator. It takes 25 days there and 35 at the poles — it is not solid, so it does not spin as one piece.",
+  28: "The Sun has rotated once at its equator. It takes 25 days there and 35 at the poles. It isn't solid, so it doesn't spin as one piece.",
   29: "Wilhelm Röntgen discovered X-rays on 8 November 1895 and had imaged his wife's hand within weeks. She said: I have seen my death.",
   30: "Kílian Jornet climbed Everest twice in one week in 2017, without supplemental oxygen and without fixed ropes.",
   31: "Randy Gardner stayed awake for 11 days in 1964 for a school science fair. The record was retired as too dangerous to attempt.",
   32: "A diving blue whale's heart beats about twice a minute. You have been going for roughly 92,000 of its heartbeats.",
-  33: "Lindbergh crossed the Atlantic alone in 33 hours 30 minutes, awake the entire way, with no forward windscreen — he navigated with a periscope.",
+  33: "Lindbergh crossed the Atlantic alone in 33 hours 30 minutes, awake the entire way, with no forward windscreen. He navigated with a periscope.",
   34: "The deepest hole ever drilled reached 12.26 km after 20 years. The crust is 35 km thick.",
   35: "Every red blood cell you started with is a third of the way through its 120-day life.",
   36: "Columbus took 36 days to cross from the Canary Islands to landfall in 1492. You just made the crossing.",
@@ -46,12 +46,12 @@ const DAYS = {
   45: "Shackleton's open-boat voyage to South Georgia covered 1,300 km of the Southern Ocean in 16 days, navigating by four sextant sightings.",
   48: "The Enigma code was broken, rebroken and broken again for six years. Turing's machines ran through 15 billion billion settings.",
   50: "About twenty-five sticks of dynamite of energy burned, at roughly a megajoule each.",
-  55: "A day on Mercury lasts 176 Earth days — twice its own year.",
+  55: "A day on Mercury lasts 176 Earth days, twice its own year.",
   60: "The fastest solo sail around the world is 42 days and 16 hours, François Gabart, 2017. Alone, no stops.",
   66: "The famous figure for forming a habit is 66 days. The study it comes from actually found a range from 18 to 254.",
   72: "The 1972 Andes survivors held out 72 days at 3,600 m. The search was called off on day 8.",
   75: "The Siege of Leningrad lasted 872 days. You are at day 75 of something considerably more pleasant.",
-  80: "Around the World in Eighty Days. Verne's number was a genuine 1872 estimate, not a fantasy — a journalist did it in 72 in 1889.",
+  80: "Around the World in Eighty Days. Verne's number was a genuine 1872 estimate, not a fantasy. A journalist did it in 72 in 1889.",
   88: "Mercury has gone all the way around the Sun. Its entire year is 88 Earth days.",
   90: "Sojourner, the first Mars rover, was designed to last seven days. It ran for 83.",
   100: "Napoleon's return from Elba to Waterloo is remembered as the Hundred Days. It was actually 111.",
@@ -62,12 +62,12 @@ const DAYS = {
   150: "Roughly the energy a fighter jet's engines consume in ninety seconds at full afterburner.",
   165: "The longest recorded ultramarathon effort, the Self-Transcendence 3100, covers 5,000 km around one city block in under 52 days.",
   180: "Half a year. Earth has carried you about 470 million km around the Sun since you started.",
-  200: "Valentina Tereshkova orbited Earth 48 times over three days in 1963 — more flight time than every American astronaut combined at that point.",
+  200: "Valentina Tereshkova orbited Earth 48 times over three days in 1963. That was more flight time than every American astronaut combined at that point.",
   225: "Venus has completed one orbit of the Sun. Its year is 225 Earth days. Its day is 243.",
   243: "One Venusian day. Venus spins so slowly that its day outlasts its year, and it spins backwards.",
   259: "A Hohmann transfer to Mars takes about 259 days. If you had left Earth the morning you started, you would be arriving today.",
   280: "A human pregnancy, first day to due date.",
-  300: "The longest continuous human spaceflight is 437 days — Valeri Polyakov aboard Mir, 1994.",
+  300: "The longest continuous human spaceflight is 437 days, by Valeri Polyakov aboard Mir in 1994.",
   340: "Scott Kelly spent 340 consecutive days aboard the ISS. You have matched him, without the radiation.",
   365: "One year. Earth is back exactly where it started. You are not.",
   400: "Longer in a row than any human has spent in space, with one exception.",
@@ -87,7 +87,7 @@ const POOL = [
   "Your bones are being dismantled and rebuilt continuously. The skeleton you have now is roughly ten years old.",
   "Concorde flew Heathrow to JFK in 2 hours 52 minutes. Nothing has flown that route faster since it retired in 2003.",
   "The Antikythera mechanism modelled the heavens with 30 bronze gears in about 100 BC. Nothing that intricate reappeared for 1,400 years.",
-  "A single bolt of lightning carries about a billion joules — roughly two thousand of your sessions, delivered in 30 microseconds.",
+  "A single bolt of lightning carries about a billion joules. That is roughly two thousand of your sessions, delivered in 30 microseconds.",
   "Emperor penguins hold a huddle in −60°C winds for two months without eating, rotating so nobody stays on the outside.",
   "The Dutch cyclist Fred Rompelberg hit 268 km/h on a bicycle in 1995, drafting behind a dragster on the Bonneville flats.",
   "Light takes 100,000 years to cross our galaxy and 8 minutes to reach you from the Sun.",
@@ -134,7 +134,7 @@ const BREAKS = [
   "Reset. Darwin sat on the theory for twenty years. Starting again is cheaper than that."
 ];
 
-/* Milestones that are about to arrive — the reason to come back tomorrow. */
+/* Milestones that are about to arrive. The reason to come back tomorrow. */
 function teaseFor(day){
   const next = day + 1;
   if(DAYS[next]) return "Tomorrow: " + shortTease(DAYS[next]);
@@ -144,7 +144,7 @@ function teaseFor(day){
 }
 function shortTease(t){
   const first = t.split(/(?<=\.)\s/)[0];
-  return first.length > 90 ? first.slice(0, 87).trim() + "…" : first;
+  return first.length > 90 ? first.slice(0, 87).trim() + "..." : first;
 }
 
 function milestoneFor(day, seenPool){

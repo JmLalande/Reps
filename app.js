@@ -60,11 +60,11 @@ function progressionNudge(){
     const recent=setsFor(key,2);
     if(recent.length<2)continue;
     const topped=recent.every(r=>r.sets.length&&r.sets.every(x=>x.reps>=M[key].hi));
-    if(topped)return {m:key,name:M[key].name};
+    if(topped)return {m:key,name:M[key].name,short:M[key].short.toLowerCase()};
   }
   return null;
 }
-const LADDER="Add reps first, then slow the lowering to 3 seconds, then pause 2 seconds at the bottom, then the vest.";
+const LADDER="Next rung: add reps, then lower over 3 seconds, then pause 2 seconds at the bottom, then put the vest on.";
 
 /* ------------------------------------------------------------------ today */
 const DOW=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -83,19 +83,19 @@ function renderToday(){
     $("tease").style.display=t?"block":"none";
   }else{
     const b=breakMessage(META.lastBreak);
-    $("mstone").textContent=META.lastStreak>1?b.text:"Nothing logged yet. One set counts — that is the whole rule.";
+    $("mstone").textContent=META.lastStreak>1?b.text:"Nothing logged yet. One set counts. That is the whole rule.";
     $("tease").style.display="none";
   }
 
   const or=$("onramp");
   if(onRamp()){
     or.style.display="block";
-    or.innerHTML="<b>Day "+daysSinceStart()+" of "+ONRAMP_DAYS+", easy on purpose.</b> Leave 3 or 4 reps in the tank on every set. No vest, no adding weight. If a range says 6–8, do 6. This is for your tendons.";
+    or.innerHTML="<b>Day "+daysSinceStart()+" of "+ONRAMP_DAYS+". Go easy, on purpose.</b> Leave 3 or 4 reps in the tank every set. No vest, no adding weight. If a range says 6–8, do 6. Your tendons take about twelve weeks to catch up to your strength, and this is the head start.";
   }else or.style.display="none";
 
   const nudge=progressionNudge(), nd=$("nudge");
   if(nudge){nd.style.display="block";
-    nd.innerHTML="<b>Move up on the "+nudge.name.toLowerCase()+".</b> You hit the top of the range twice running. "+LADDER;}
+    nd.innerHTML="<b>Time to make the "+nudge.short+" harder.</b> You hit the top of the rep range two sessions in a row. "+LADDER;}
   else nd.style.display="none";
 
   const done=SESSIONS[todayISO()];
@@ -116,7 +116,7 @@ function renderRoutine(){
     const d=WEEK[dk];
     const rows=d.blocks.map(b=>{const m=M[b.m];
       return "<li><span>"+m.name+"</span><span class='s'>"+b.sets+" × "+m.reps+(b.rest?" · "+b.rest+"s":"")+"</span></li>";}).join("");
-    const cues=d.blocks.map(b=>"<p class='muted' style='margin-top:8px'><b style='color:var(--pale)'>"+M[b.m].short+"</b> — "+M[b.m].cue+"</p>").join("");
+    const cues=d.blocks.map(b=>"<p class='muted' style='margin-top:10px'><b style='color:var(--pale)'>"+M[b.m].short+".</b> "+M[b.m].cue+"</p>").join("");
     return "<div class='card'><div class='row'><h3>"+DOW[dk]+"</h3><span class='badge "+d.tag+"'>"+d.tag+"</span></div>"+
       "<p class='muted'>"+d.note+"</p><ul class='plan'>"+rows+"</ul>"+cues+"</div>";
   }).join("");
@@ -158,7 +158,7 @@ function renderStats(){
   $("prs").innerHTML=prs.length?prs.map(x=>"<div class='stat'><span>"+M[x.k].name+
     "<br><span class='muted'>"+new Date(x.pr.date+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})+"</span></span>"+
     "<span class='v mono'>"+x.pr.reps+" <small>"+(M[x.k].hold?"s":"reps")+"</small></span></div>").join("")
-    :"<p class='muted'>Log a few sets and your bests show up here.</p>";
+    :"<p class='muted'>Log a few sets and your best ones show up here.</p>";
 
   /* then and now */
   const cut=iso(new Date(Date.now()-60*864e5));
@@ -173,7 +173,7 @@ function renderStats(){
     }
   });
   if(lines.length){$("retroCard").style.display="block";
-    $("retro").innerHTML="<p class='muted' style='margin-bottom:8px'>Two months ago against now, best set.</p>"+lines.join("");}
+    $("retro").innerHTML="<p class='muted' style='margin-bottom:8px'>Your best set two months ago, against your best set now.</p>"+lines.join("");}
   else $("retroCard").style.display="none";
 
   /* hours */
@@ -182,7 +182,7 @@ function renderStats(){
   const mx=Math.max(1,...hours);
   $("hourBars").innerHTML=hours.map(v=>"<i style='height:"+Math.max(2,(v/mx)*100)+"%;opacity:"+(v?0.9:0.12)+"'></i>").join("");
   const busiest=hours.indexOf(Math.max(...hours));
-  $("hourNote").textContent=Object.keys(SESSIONS).length?"Most often around "+String(busiest).padStart(2,"0")+":00":"";
+  $("hourNote").textContent=Object.keys(SESSIONS).length?"You train most often around "+String(busiest).padStart(2,"0")+":00.":"";
 
   /* length */
   const ls=Object.values(SESSIONS).filter(s=>s.actualSec).sort((a,b)=>a.date.localeCompare(b.date)).slice(-30);
@@ -190,7 +190,7 @@ function renderStats(){
   $("lenSpark").innerHTML=ls.map(s=>"<i style='height:"+(s.actualSec/lmx*100)+"%;background:"+
     (s.actualSec>960?"var(--amber)":"var(--teal)")+"'></i>").join("");
   if(ls.length){const avg=ls.reduce((a,s)=>a+s.actualSec,0)/ls.length;
-    $("lenNote").textContent="Average "+fmt(avg)+" over the last "+ls.length+". Claimed: 15:00.";}
+    $("lenNote").textContent="Average "+fmt(avg)+" over your last "+ls.length+" sessions.";}
   else $("lenNote").textContent="";
 
   /* weight */
@@ -199,7 +199,7 @@ function renderStats(){
     const lo=Math.min(...w.map(x=>x.w)), hi=Math.max(...w.map(x=>x.w)), span=Math.max(1,hi-lo);
     $("wtSpark").innerHTML=w.map(x=>"<i style='height:"+(12+((x.w-lo)/span)*88)+"%'></i>").join("");
     const first=w[0].w,last=w[w.length-1].w,dd=(last-first).toFixed(1);
-    $("wtNote").textContent="Latest "+last+" lb · "+(dd>0?"+":"")+dd+" lb across "+w.length+" entries.";
+    $("wtNote").textContent=last+" lb today. "+(dd>0?"Up ":(dd<0?"Down ":"Level, "))+(dd!=0?Math.abs(dd)+" lb ":"")+"across "+w.length+" weigh-ins.";
   }else{$("wtSpark").innerHTML="";$("wtNote").textContent="No entries yet.";}
 }
 
@@ -443,7 +443,7 @@ $("impFile").addEventListener("change",async e=>{
     for(const w of (d.weights||[]))await put("weights",w);
     if(d.meta){META=Object.assign(META,d.meta,{k:"app"});await put("meta",META);}
     await load();toast("Imported");
-  }catch(err){toast("That file did not parse");}
+  }catch(err){toast("Could not read that file");}
   e.target.value="";
 });
 
@@ -454,5 +454,5 @@ async function load(){
   WEIGHTS=await all("weights");
   renderToday();renderRoutine();renderHistory();renderStats();
 }
-open().then(load).catch(()=>{toast("Storage unavailable");renderToday();renderRoutine();});
+open().then(load).catch(()=>{toast("This browser will not let the app save anything");renderToday();renderRoutine();});
 if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));

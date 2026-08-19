@@ -1,37 +1,37 @@
 /* The program. Edit here, everything else follows. ------------------------ */
 "use strict";
 
-/* Movements. `work` is the estimated seconds the set itself takes — it seeds the
+/* Movements. `work` is the estimated seconds the set itself takes. It seeds the
    clock, and your recalibrate taps correct it. `hold` marks isometric work that
    is measured in seconds instead of reps. */
 const M = {
-  press:    {short:"KB press",      name:"Half-kneeling one-arm kettlebell press", reps:"6–8",   lo:6,  hi:8,  side:"each arm", load:"16 kg",     work:60, def:7,  cue:"Same-side knee down. Ribs down. Press straight up, bicep by your ear."},
-  lateral:  {short:"Lateral raise", name:"Lateral raise",                          reps:"12–15", lo:12, hi:15, side:"",         load:"dumbbells", work:40, def:13, cue:"Lead with the elbows. Stop at shoulder height. No swinging."},
-  reardelt: {short:"Rear delt",     name:"Bent-over rear delt raise",              reps:"15",    lo:15, hi:15, side:"",         load:"dumbbells", work:40, def:15, cue:"Hinge to ~45°. Open like a curtain. Feel it behind the shoulder, not the neck."},
-  curl:     {short:"KB curl",       name:"Kettlebell curl, one arm",               reps:"8–10",  lo:8,  hi:10, side:"each arm", load:"16 kg",     work:45, def:9,  cue:"Hold one horn so the bell sits outside your wrist. Elbow pinned."},
-  ohext:    {short:"OH extension",  name:"Overhead kettlebell extension",          reps:"10–12", lo:10, hi:12, side:"",         load:"16 kg",     work:40, def:11, cue:"Cup the ball, handle down your back. Elbows forward, close together."},
-  pushup:   {short:"Push-ups",      name:"Feet-elevated push-ups on parallettes",  reps:"8–15",  lo:8,  hi:15, side:"",         load:"bodyweight",work:45, def:11, cue:"Feet on the ~12in step. Handles in a shallow V. Elbows 45° from your ribs."},
-  swing:    {short:"KB swings",     name:"Kettlebell swings",                      reps:"20",    lo:20, hi:20, side:"",         load:"16 kg",     work:45, def:20, cue:"Hips, not arms. Hike it back, snap the hips, let it float. Back stays flat."},
+  press:    {short:"KB press",      name:"Half-kneeling one-arm kettlebell press", reps:"6–8",   lo:6,  hi:8,  side:"each arm", load:"16 kg",     work:60, def:7,  cue:"Bell in your right hand means right knee down. Breathe out and let your ribs settle so your back does not arch. Press straight up until your bicep is beside your ear."},
+  lateral:  {short:"Lateral raise", name:"Lateral raise",                          reps:"12–15", lo:12, hi:15, side:"",         load:"dumbbells", work:40, def:13, cue:"Lead with your elbows, not your hands. Stop at shoulder height. If you need to swing, go lighter."},
+  reardelt: {short:"Rear delt",     name:"Bent-over rear delt raise",              reps:"15",    lo:15, hi:15, side:"",         load:"dumbbells", work:40, def:15, cue:"Bend forward to about 45°, knees soft. Open your arms like a curtain. You should feel it behind the shoulder, not in your neck."},
+  curl:     {short:"KB curl",       name:"Kettlebell curl, one arm",               reps:"8–10",  lo:8,  hi:10, side:"each arm", load:"16 kg",     work:45, def:9,  cue:"Grip one side of the handle so the bell sits outside your wrist instead of banging your forearm. Keep your elbow at your side."},
+  ohext:    {short:"OH extension",  name:"Overhead kettlebell extension",          reps:"10–12", lo:10, hi:12, side:"",         load:"16 kg",     work:40, def:11, cue:"Cup the round part with both hands, handle pointing down your back. Keep your elbows forward and close together."},
+  pushup:   {short:"Push-ups",      name:"Feet-elevated push-ups on parallettes",  reps:"8–15",  lo:8,  hi:15, side:"",         load:"bodyweight",work:45, def:11, cue:"Feet on the 12-inch step. Turn the handles out into a shallow V. Elbows about 45° from your ribs, not flared wide."},
+  swing:    {short:"KB swings",     name:"Kettlebell swings",                      reps:"20",    lo:20, hi:20, side:"",         load:"16 kg",     work:45, def:20, cue:"Your hips do this, not your arms. Swing it back between your legs, snap your hips forward, let it float up. Back stays flat."},
 
-  doorpress:{short:"Doorframe push",name:"Doorframe overhead press-up",            reps:"4 × 3s",lo:4,  hi:4,  side:"",         load:"max effort",work:32, def:4,  hold:true, cue:"Hands under the top of the frame. Push like you're lifting the house. 3s on, 5s off, four times."},
-  tablecurl:{short:"Under-table",   name:"Under-table curl press",                 reps:"4 × 3s",lo:4,  hi:4,  side:"",         load:"max effort",work:32, def:4,  hold:true, cue:"Palms up under a heavy tabletop, elbows ~90°. Drive up hard for 3s."},
-  tablepush:{short:"Table press",   name:"Top-of-table press-down",                reps:"4 × 3s",lo:4,  hi:4,  side:"",         load:"max effort",work:32, def:4,  hold:true, cue:"Palms down on top, elbows ~90°. Press down hard for 3s."},
-  splitsq:  {short:"Split squat",   name:"Split-squat hold",                       reps:"30s",   lo:30, hi:30, side:"each leg", load:"bodyweight",work:70, def:30, hold:true, cue:"Long stride, front thigh parallel, back knee a few inches off the floor. Hand on a wall is fine."}
+  doorpress:{short:"Doorframe push",name:"Doorframe overhead press-up",            reps:"4 × 3s",lo:4,  hi:4,  side:"",         load:"max effort",work:32, def:4,  hold:true, cue:"Hands flat under the top of the door frame. Push up like you are trying to lift the house. Three seconds on, five off, four times."},
+  tablecurl:{short:"Under-table",   name:"Under-table curl press",                 reps:"4 × 3s",lo:4,  hi:4,  side:"",         load:"max effort",work:32, def:4,  hold:true, cue:"Palms up under a heavy tabletop, elbows bent about 90°. Drive up as hard as you can for three seconds."},
+  tablepush:{short:"Table press",   name:"Top-of-table press-down",                reps:"4 × 3s",lo:4,  hi:4,  side:"",         load:"max effort",work:32, def:4,  hold:true, cue:"Palms down on top of the table, elbows bent about 90°. Press down as hard as you can for three seconds."},
+  splitsq:  {short:"Split squat",   name:"Split-squat hold",                       reps:"30s",   lo:30, hi:30, side:"each leg", load:"bodyweight",work:70, def:30, hold:true, cue:"Long stride. Drop until your front thigh is level with the floor and your back knee is a few inches off it. A hand on the wall is fine."}
 };
 
 /* The week. 0 = Sunday, matching JS getDay(). */
 const WEEK = {
-  1: {name:"Press A",   tag:"hard",  note:"Volleyball tonight. A set of the press is both arms — left, put it down, right, then rest.",
+  1: {name:"Press A",   tag:"hard",  note:"Volleyball tonight. A set of the press is both arms. Left, put it down, right, then rest.",
       blocks:[{m:"press",sets:3,rest:90},{m:"lateral",sets:3,rest:45},{m:"reardelt",sets:2,rest:40}]},
-  2: {name:"Arms",      tag:"mod",   note:"Late night behind you. Nothing here taxes your nervous system. Stretch the rests if you need to.",
+  2: {name:"Arms",      tag:"mod",   note:"Late night behind you. Nothing here is hard on you. Stretch the rests if you need them.",
       blocks:[{m:"curl",sets:4,rest:60},{m:"ohext",sets:3,rest:60},{m:"reardelt",sets:2,rest:40}]},
   3: {name:"Chest",     tag:"hard",  note:"Volleyball tonight. If you clear 15 push-ups, raise the feet or put the vest on.",
       blocks:[{m:"pushup",sets:4,rest:75},{m:"lateral",sets:3,rest:45},{m:"swing",sets:1,rest:0}]},
   4: {name:"Delts only",tag:"light", note:"Climbing tonight. Nothing that loads elbow or grip. Nine minutes and out.",
       blocks:[{m:"lateral",sets:4,rest:45},{m:"reardelt",sets:3,rest:40}]},
-  5: {name:"Press B",   tag:"hard",  note:"Same press as Monday, tracked separately — you'll progress on one before the other.",
+  5: {name:"Press B",   tag:"hard",  note:"Same press as Monday, tracked separately. You'll get stronger on one before the other.",
       blocks:[{m:"press",sets:3,rest:90},{m:"curl",sets:3,rest:60},{m:"ohext",sets:2,rest:60}]},
-  6: {name:"Tendon · shoulder & knee", tag:"tendon", note:"Boring on purpose. Push the furniture as hard as you can — nothing moves, so there's no risk in going all out.",
+  6: {name:"Tendon · shoulder & knee", tag:"tendon", note:"Boring on purpose. Push the furniture as hard as you physically can. Nothing moves, so there is no risk in going all out.",
       blocks:[{m:"doorpress",sets:3,rest:60},{m:"splitsq",sets:3,rest:45}]},
   0: {name:"Tendon · elbow",           tag:"tendon", note:"Same idea, elbows today. Then one set of swings and you're done for the week.",
       blocks:[{m:"tablecurl",sets:3,rest:60},{m:"tablepush",sets:3,rest:60},{m:"swing",sets:1,rest:0}]}
