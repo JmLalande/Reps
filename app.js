@@ -74,25 +74,24 @@ function renderToday(){
   $("todayName").textContent=day.name;
   const streak=computeStreak();
   $("streakN").textContent=streak;
-  $("streakN").classList.toggle("live",streak>0);
+  $("streakN").classList.toggle("zero",streak===0);
 
   const msEl=$("mstone"), tzEl=$("tease");
+  tzEl.style.display="none";
   if(streak>0){
-    const ms=milestoneFor(streak,META.poolSeen);
-    msEl.textContent=ms.text; msEl.style.display="block";
-    const t=teaseFor(streak);
-    tzEl.textContent=t||""; tzEl.style.display=t?"block":"none";
+    const soon=DAYS[streak+1];
+    msEl.textContent=soon?("Tomorrow: "+soon):milestoneFor(streak,META.poolSeen).text;
+    msEl.classList.toggle("ahead",!!soon);
+    msEl.style.display="block";
   }else if(META.lastStreak>1){
-    msEl.textContent=breakMessage(META.lastBreak).text; msEl.style.display="block";
-    tzEl.style.display="none";
-  }else{
-    msEl.style.display="none"; tzEl.style.display="none";
-  }
+    msEl.textContent=breakMessage(META.lastBreak).text;
+    msEl.classList.remove("ahead"); msEl.style.display="block";
+  }else{ msEl.style.display="none"; }
 
   const or=$("onramp");
   if(onRamp()){
     or.style.display="block";
-    or.innerHTML="<b>Day "+daysSinceStart()+" of "+ONRAMP_DAYS+".</b> Leave 3 or 4 in the tank. No vest.";
+    or.textContent="Easy weeks, "+daysSinceStart()+"/"+ONRAMP_DAYS+" · leave 3-4 in reserve, no vest";
   }else or.style.display="none";
 
   const nudge=progressionNudge(), nd=$("nudge");
@@ -102,6 +101,9 @@ function renderToday(){
 
   const done=SESSIONS[todayISO()];
   $("startBtn").textContent=done?(done.complete?"Start again":"Resume"):"Start session";
+  const ec=$("editToday");
+  if(qualifies(done)){ec.style.display="block";ec.textContent="Edit today, "+done.sets.length+(done.sets.length===1?" set":" sets");}
+  else ec.style.display="none";
 
   $("planList").innerHTML=day.blocks.map((b,i)=>{
     const m=M[b.m];
@@ -140,7 +142,7 @@ function renderHistory(){
     else if(!future&&META.firstDay&&key>=META.firstDay)cls+=" miss";
     if(future)cls+=" future";
     if(key===todayISO())cls+=" today";
-    h+="<div class='"+cls+"'>"+d+"</div>";
+    h+="<div class='"+cls+"'"+(qualifies(s)?" data-edit='"+key+"' style='cursor:pointer'":"")+">"+d+"</div>";
   }
   $("cal").innerHTML=h;
 
@@ -148,10 +150,15 @@ function renderHistory(){
   $("recent").innerHTML=list.length?list.map(s=>{
     const dt=new Date(s.date+"T12:00:00");
     const t=s.startedAt?new Date(s.startedAt).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}):"—";
-    return "<div class='stat'><span>"+dt.toLocaleDateString(undefined,{month:"short",day:"numeric"})+
-      " · "+WEEK[s.dayKey].name+"<br><span class='muted'>"+(s.sets||[]).length+" sets · "+t+"</span></span>"+
+    return "<div class='stat' data-edit='"+s.date+"' style='cursor:pointer'><span>"+
+      dt.toLocaleDateString(undefined,{month:"short",day:"numeric"})+
+      " · "+WEEK[s.dayKey].name+"<br><span class='muted'>"+(s.sets||[]).length+((s.sets||[]).length===1?" set · ":" sets · ")+t+"</span></span>"+
       "<span class='v mono'>"+(s.actualSec?fmt(s.actualSec):"—")+"</span></div>";
   }).join(""):"<p class='muted'>Nothing yet.</p>";
+  document.querySelectorAll("[data-edit]").forEach(el=>{
+    if(el._wired)return; el._wired=1;
+    el.addEventListener("click",()=>openEditor(el.dataset.edit));
+  });
 }
 
 /* ------------------------------------------------------------------ stats */
@@ -238,9 +245,8 @@ function tone(f,d,g,type){
   }catch(e){}
 }
 /* the ramp: five soft ticks rising, then one low tone. never an alarm. */
-const TICK=[392,440,494,554,622];
-function tick(n){tone(TICK[5-n]||440,.055,.035);if(navigator.vibrate)navigator.vibrate(12);}
-function goTone(){tone(294,.34,.075,"triangle");if(navigator.vibrate)navigator.vibrate([26,50,26]);}
+function tick(n){tone(880,.085,.045);if(navigator.vibrate)navigator.vibrate(14);}
+function goTone(){tone(1320,.22,.07);if(navigator.vibrate)navigator.vibrate([26,50,26]);}
 
 function startSession(){
   dayKey=new Date().getDay();
@@ -356,7 +362,7 @@ function finish(){
   saveSession(true,actual);
   const streak=computeStreak();
   $("sStreak").textContent=streak;
-  $("doneNote").textContent=logged.length+" sets logged. "+
+  $("doneNote").textContent=logged.length+(logged.length===1?" set logged. ":" sets logged. ")+
     (streak>0?("Day "+streak+" in a row."):"");
   const ms=streak>0?milestoneFor(streak,META.poolSeen):null;
   $("doneMs").textContent=ms?ms.text:"";
@@ -392,14 +398,81 @@ function loop(now){
     else{
       if(p.type==="rest"&&!holding){
         const lft=Math.ceil(p.dur-el);
-        if(lft<=5&&lft>0&&lft!==tickMark){tickMark=lft;tick(lft);}
-        if(lft>5)tickMark=-1;
+        if(lft<=3&&lft>0&&lft!==tickMark){tickMark=lft;tick(lft);}
+        if(lft>3)tickMark=-1;
       }
       render();
     }
   }
   raf=requestAnimationFrame(loop);
 }
+
+
+/* ----------------------------------------------------------------- editor */
+let edDate=null;
+function openEditor(date){
+  const s=SESSIONS[date]; if(!s)return;
+  edDate=date;
+  const d=new Date(date+"T12:00:00");
+  $("edDate").textContent=d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+  $("edDay").textContent=WEEK[s.dayKey].name;
+  $("edMove").innerHTML=WEEK[s.dayKey].blocks.map(b=>"<option value='"+b.m+"'>"+M[b.m].name+"</option>").join("");
+  renderEdList();
+  $("editor").classList.add("on");
+}
+function renderEdList(){
+  const s=SESSIONS[edDate];
+  if(!s.sets.length){$("edList").innerHTML="<p class='muted'>No sets left on this day.</p>";return;}
+  let h="<div class='edlab'><span>Reps</span><span>RIR</span></div>";
+  h+=s.sets.map((x,i)=>{
+    const m=M[x.m];
+    return "<div class='edrow'><span class='who'>"+m.name+"<small>Set "+x.set+"</small></span>"+
+      "<input type='number' inputmode='numeric' value='"+x.reps+"' data-i='"+i+"' data-f='reps'>"+
+      "<select data-i='"+i+"' data-f='rir'>"+[0,1,2,3,4].map(n=>
+        "<option value='"+n+"'"+(x.rir===n?" selected":"")+">"+(n===4?"4+":n)+"</option>").join("")+"</select>"+
+      "<button class='x' data-del='"+i+"' aria-label='Remove set'>"+
+      "<svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round'><path d='M6 6l12 12M18 6L6 18'/></svg></button></div>";
+  }).join("");
+  $("edList").innerHTML=h;
+  $("edList").querySelectorAll("input[data-f],select[data-f]").forEach(el=>{
+    el.addEventListener("change",async()=>{
+      const i=+el.dataset.i, f=el.dataset.f, v=parseInt(el.value,10);
+      if(isNaN(v))return;
+      SESSIONS[edDate].sets[i][f]=Math.max(0,v);
+      await persistEdit();
+    });
+  });
+  $("edList").querySelectorAll("button[data-del]").forEach(b=>{
+    b.addEventListener("click",async()=>{
+      SESSIONS[edDate].sets.splice(+b.dataset.del,1);
+      await persistEdit(); renderEdList();
+    });
+  });
+}
+async function persistEdit(){
+  const s=SESSIONS[edDate];
+  s.complete=s.complete&&s.sets.length>0;
+  await put("sessions",s);
+  META.lastStreak=computeStreak(); await put("meta",META);
+  renderToday();renderHistory();renderStats();
+}
+$("edAdd").addEventListener("click",async()=>{
+  const s=SESSIONS[edDate], mk=$("edMove").value;
+  const n=s.sets.filter(x=>x.m===mk).length+1;
+  s.sets.push({m:mk,set:n,reps:M[mk].def,rir:2,ts:Date.now()});
+  await persistEdit(); renderEdList();
+});
+$("edDel").addEventListener("click",async()=>{
+  if(!edDate)return;
+  const d=edDate;
+  delete SESSIONS[d];
+  await new Promise((res,rej)=>{const q=tx("sessions","readwrite").delete(d);q.onsuccess=()=>res();q.onerror=()=>rej();});
+  META.lastStreak=computeStreak(); await put("meta",META);
+  $("editor").classList.remove("on"); edDate=null;
+  renderToday();renderHistory();renderStats();toast("Session deleted");
+});
+$("edClose").addEventListener("click",()=>{$("editor").classList.remove("on");edDate=null;});
+$("editor").addEventListener("click",e=>{if(e.target.id==="editor"){$("editor").classList.remove("on");edDate=null;}});
 
 /* ------------------------------------------------------------------- wire */
 $("field").addEventListener("click",()=>{
@@ -414,6 +487,7 @@ $("sndBtn").addEventListener("click",function(){sound=!sound;this.setAttribute("
 $("quitBtn").addEventListener("click",leaveSession);
 $("doneBtn").addEventListener("click",leaveSession);
 $("startBtn").addEventListener("click",startSession);
+$("editToday").addEventListener("click",()=>openEditor(todayISO()));
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("on"));

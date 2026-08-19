@@ -62,9 +62,9 @@ nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;st
 .hero{padding:2px 0 0}
 .hero .d{font-size:42px;line-height:1.04;margin-top:10px;font-weight:600;letter-spacing:-.03em}
 .streakbar{display:flex;align-items:baseline;gap:16px;margin-top:34px}
-.streakN{font-size:82px;line-height:.84;font-weight:700;letter-spacing:-.055em;color:var(--faint);
+.streakN{font-size:82px;line-height:.84;font-weight:700;letter-spacing:-.055em;color:var(--pale);
   transition:color .4s ease;}
-.streakN.live{color:var(--acc);
+.streakN.zero{color:var(--faint);
   font-variant-numeric:tabular-nums}
 .streakL{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);font-weight:500;line-height:1.5}
 .mstone{margin-top:26px;font-size:16.5px;line-height:1.6;font-weight:300;color:#E4E5E7}
@@ -94,9 +94,11 @@ details.cue .body{margin-top:12px}
 details.cue p{font-size:13.5px;color:var(--dim);line-height:1.6;font-weight:300;margin-top:11px}
 details.cue p:first-child{margin-top:0}
 details.cue b{color:var(--pale);font-weight:500}
-.onramp,.nudge{margin-top:20px;font-size:13.5px;color:var(--dim);line-height:1.6;font-weight:300;
+.onramp{margin-top:16px;font-size:12px;color:var(--faint);font-weight:400;letter-spacing:.01em}
+.nudge{margin-top:20px;font-size:13.5px;color:var(--dim);line-height:1.6;font-weight:300;
   background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px 17px}
-.onramp b,.nudge b{color:var(--pale);font-weight:600}
+.nudge b{color:var(--pale);font-weight:600}
+.mstone.ahead{color:var(--dim)}
 
 /* ---------- session ---------- */
 .sess{position:fixed;inset:0;z-index:60;display:none;background:#050506;align-items:center;justify-content:center}
@@ -210,6 +212,36 @@ details.cue b{color:var(--pale);font-weight:500}
 .bars i{flex:1;background:var(--acc);border-radius:3px;min-height:2px}
 .spark{display:flex;align-items:flex-end;gap:2px;height:46px;margin-top:14px}
 .spark i{flex:1;background:rgba(255,255,255,.3);border-radius:2px;min-height:2px}
+.editor{position:fixed;inset:0;z-index:70;background:rgba(6,7,8,.72);backdrop-filter:blur(14px);
+  display:none;align-items:flex-end;justify-content:center}
+.editor.on{display:flex}
+.ed{width:100%;max-width:520px;max-height:88dvh;overflow-y:auto;background:#101214;
+  border-top-left-radius:26px;border-top-right-radius:26px;border:1px solid var(--line);
+  padding:24px 22px calc(26px + env(safe-area-inset-bottom))}
+.edtop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.edtop .iconbtn{color:var(--dim)}
+.edlist{margin-top:20px}
+.edrow{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.edrow .who{flex:1;min-width:0;font-size:14px}
+.edrow .who small{display:block;color:var(--faint);font-size:11.5px;margin-top:2px;font-weight:300}
+.edrow input{width:56px;padding:.5rem .4rem;text-align:center;border-radius:11px;font-size:15px;
+  font-variant-numeric:tabular-nums}
+.edrow select{width:62px;padding:.5rem .3rem;border-radius:11px;font-size:14px;background:var(--panel);
+  border:1px solid var(--line);color:var(--pale);text-align:center}
+.edrow .x{width:34px;height:34px;display:grid;place-items:center;border-radius:999px;color:var(--faint);flex:0 0 auto}
+.edrow .x:active{background:var(--panel2)}
+.edlab{display:flex;gap:10px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--faint);font-weight:500;justify-content:flex-end;padding-right:44px}
+.edlab span:first-child{width:56px;text-align:center}
+.edlab span:last-child{width:62px;text-align:center}
+.edadd{display:flex;gap:10px;margin-top:18px}
+.edadd select{flex:1;min-width:0;padding:.75rem .8rem;border-radius:999px;background:var(--panel);
+  border:1px solid var(--line);color:var(--pale);font-size:14px}
+.danger{display:block;width:100%;margin-top:22px;background:transparent;border:1px solid rgba(255,92,92,.3);
+  color:#FF7A7A;border-radius:999px;padding:15px;font-size:14.5px;font-weight:500}
+.danger:active{background:rgba(255,92,92,.1)}
+.editcta{display:block;width:100%;margin-top:14px;background:var(--panel);border:1px solid var(--line);
+  color:var(--dim);border-radius:999px;padding:13px;font-size:13.5px;font-weight:500}
 .toast{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);background:var(--pale);color:#0A0B0C;
   padding:12px 22px;border-radius:999px;font-size:14px;font-weight:500;z-index:80;opacity:0;
   transition:opacity .3s ease;pointer-events:none;max-width:88vw;text-align:center;box-shadow:var(--lift)}
@@ -287,6 +319,7 @@ details.cue b{color:var(--pale);font-weight:500}
     <div class="onramp" id="onramp" style="display:none"></div>
     <div class="nudge" id="nudge" style="display:none"></div>
     <button class="go" id="startBtn">Start session</button>
+    <button class="editcta" id="editToday" style="display:none"></button>
     <div class="card">
       <ul class="plan" id="planList"></ul>
     </div>
@@ -344,6 +377,19 @@ details.cue b{color:var(--pale);font-weight:500}
         <button class="go small" id="impBtn" style="margin:0">Import</button></div>
       <input type="file" id="impFile" accept="application/json" style="display:none"></div>
   </section>
+</div>
+
+<div class="editor" id="editor">
+  <div class="ed">
+    <div class="edtop">
+      <div><div class="kick" id="edDate">—</div><h2 id="edDay" style="font-size:24px;margin-top:5px">—</h2></div>
+      <button class="iconbtn" id="edClose" aria-label="Close">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="edlist" id="edList"></div>
+    <div class="edadd"><select id="edMove"></select><button class="go small" id="edAdd">Add set</button></div>
+    <button class="danger" id="edDel">Delete this session</button>
+  </div>
 </div>
 
 <nav><div class="in">
