@@ -64,7 +64,7 @@ function progressionNudge(){
   }
   return null;
 }
-const LADDER="Next rung: add reps, then lower over 3 seconds, then pause 2 seconds at the bottom, then put the vest on.";
+const LADDER="Add reps, then lower over 3s, then pause 2s at the bottom, then the vest.";
 
 /* ------------------------------------------------------------------ today */
 const DOW=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -74,38 +74,39 @@ function renderToday(){
   $("todayName").textContent=day.name;
   const streak=computeStreak();
   $("streakN").textContent=streak;
+  $("streakN").classList.toggle("live",streak>0);
 
+  const msEl=$("mstone"), tzEl=$("tease");
   if(streak>0){
     const ms=milestoneFor(streak,META.poolSeen);
-    $("mstone").textContent=ms.text;
+    msEl.textContent=ms.text; msEl.style.display="block";
     const t=teaseFor(streak);
-    $("tease").textContent=t||"";
-    $("tease").style.display=t?"block":"none";
+    tzEl.textContent=t||""; tzEl.style.display=t?"block":"none";
+  }else if(META.lastStreak>1){
+    msEl.textContent=breakMessage(META.lastBreak).text; msEl.style.display="block";
+    tzEl.style.display="none";
   }else{
-    const b=breakMessage(META.lastBreak);
-    $("mstone").textContent=META.lastStreak>1?b.text:"Nothing logged yet. One set counts. That is the whole rule.";
-    $("tease").style.display="none";
+    msEl.style.display="none"; tzEl.style.display="none";
   }
 
   const or=$("onramp");
   if(onRamp()){
     or.style.display="block";
-    or.innerHTML="<b>Day "+daysSinceStart()+" of "+ONRAMP_DAYS+". Go easy, on purpose.</b> Leave 3 or 4 reps in the tank every set. No vest, no adding weight. If a range says 6–8, do 6. Your tendons take about twelve weeks to catch up to your strength, and this is the head start.";
+    or.innerHTML="<b>Day "+daysSinceStart()+" of "+ONRAMP_DAYS+".</b> Leave 3 or 4 in the tank. No vest.";
   }else or.style.display="none";
 
   const nudge=progressionNudge(), nd=$("nudge");
   if(nudge){nd.style.display="block";
-    nd.innerHTML="<b>Time to make the "+nudge.short+" harder.</b> You hit the top of the rep range two sessions in a row. "+LADDER;}
+    nd.innerHTML="<b>"+nudge.short+": top of the range twice.</b> "+LADDER;}
   else nd.style.display="none";
 
   const done=SESSIONS[todayISO()];
-  $("startBtn").textContent=done?(done.complete?"Session done · start again":"Resume today"):"Start session";
+  $("startBtn").textContent=done?(done.complete?"Start again":"Resume"):"Start session";
 
-  $("planTitle").innerHTML=day.name+' <span class="badge '+day.tag+'">'+day.tag+"</span>";
-  $("planNote").textContent=day.note;
-  $("planList").innerHTML=day.blocks.map(b=>{
+  $("planList").innerHTML=day.blocks.map((b,i)=>{
     const m=M[b.m];
-    return "<li><span>"+m.name+"</span><span class='s'>"+b.sets+" × "+m.reps+(b.rest?" · "+b.rest+"s":"")+"</span></li>";
+    return "<li><span class='n'>"+(i+1)+"</span><span class='nm'>"+m.name+"</span><span class='s'>"+
+      b.sets+" × "+m.reps+(b.rest?" · "+b.rest+"s":"")+"</span></li>";
   }).join("");
 }
 
@@ -114,11 +115,12 @@ function renderRoutine(){
   const order=[1,2,3,4,5,6,0];
   $("routineList").innerHTML=order.map(dk=>{
     const d=WEEK[dk];
-    const rows=d.blocks.map(b=>{const m=M[b.m];
-      return "<li><span>"+m.name+"</span><span class='s'>"+b.sets+" × "+m.reps+(b.rest?" · "+b.rest+"s":"")+"</span></li>";}).join("");
-    const cues=d.blocks.map(b=>"<p class='muted' style='margin-top:10px'><b style='color:var(--pale)'>"+M[b.m].short+".</b> "+M[b.m].cue+"</p>").join("");
-    return "<div class='card'><div class='row'><h3>"+DOW[dk]+"</h3><span class='badge "+d.tag+"'>"+d.tag+"</span></div>"+
-      "<p class='muted'>"+d.note+"</p><ul class='plan'>"+rows+"</ul>"+cues+"</div>";
+    const rows=d.blocks.map((b,i)=>{const m=M[b.m];
+      return "<li><span class='n'>"+(i+1)+"</span><span class='nm'>"+m.name+"</span><span class='s'>"+
+        b.sets+" × "+m.reps+(b.rest?" · "+b.rest+"s":"")+"</span></li>";}).join("");
+    const cues=d.blocks.map(b=>"<p><b>"+M[b.m].short+".</b> "+M[b.m].cue+"</p>").join("");
+    return "<div class='card'><h3>"+DOW[dk]+"</h3><ul class='plan'>"+rows+"</ul>"+
+      "<details class='cue'><summary>How to</summary><div class='body'>"+cues+"</div></details></div>";
   }).join("");
 }
 
@@ -279,14 +281,14 @@ function render(){
   $("exName").textContent=work?m.name:(nextW?sm.name:"Session ends");
   setPips(show.sets,show.set);
   $("target").innerHTML="<b>"+sm.reps+"</b>"+(sm.side?" "+sm.side:(sm.hold?"":" reps"))+" · <b>"+sm.load+"</b>";
-  $("cueLine").textContent=work?m.cue:"";
   $("nextLbl").textContent=work
     ?(PH[idx+1]?"Rest "+fmt(PH[idx+1].dur)+(nextW?", then "+M[nextW.m].short+" "+nextW.set:""):"Last set")
     :(nextW?M[nextW.m].short+" set "+nextW.set:"Session ends");
   const end=new Date(Date.now()+remaining()*1000);
   $("endAt").textContent=String(end.getHours()).padStart(2,"0")+":"+String(end.getMinutes()).padStart(2,"0");
-  $("hint").firstChild.nodeValue=holding?"Log the set to keep going · ends "
-    :(work?"Tap anywhere when the set is done · ends ":"Tap anywhere to start early · ends ");
+  const green=Object.keys(SESSIONS).length<4;
+  $("hint").firstChild.nodeValue=holding?"Log the set · ends "
+    :(green?(work?"Tap anywhere when the set is done · ends ":"Tap anywhere to start early · ends "):"Ends ");
   const prog=Math.min(1,Math.max(0,el/p.dur));
   bar.style.strokeDashoffset=over?0:RLEN*prog;
   ring.classList.toggle("over",!!over);

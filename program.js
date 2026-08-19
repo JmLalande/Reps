@@ -21,20 +21,13 @@ const M = {
 
 /* The week. 0 = Sunday, matching JS getDay(). */
 const WEEK = {
-  1: {name:"Press A",   tag:"hard",  note:"Volleyball tonight. A set of the press is both arms. Left, put it down, right, then rest.",
-      blocks:[{m:"press",sets:3,rest:90},{m:"lateral",sets:3,rest:45},{m:"reardelt",sets:2,rest:40}]},
-  2: {name:"Arms",      tag:"mod",   note:"Late night behind you. Nothing here is hard on you. Stretch the rests if you need them.",
-      blocks:[{m:"curl",sets:4,rest:60},{m:"ohext",sets:3,rest:60},{m:"reardelt",sets:2,rest:40}]},
-  3: {name:"Chest",     tag:"hard",  note:"Volleyball tonight. If you clear 15 push-ups, raise the feet or put the vest on.",
-      blocks:[{m:"pushup",sets:4,rest:75},{m:"lateral",sets:3,rest:45},{m:"swing",sets:1,rest:0}]},
-  4: {name:"Delts only",tag:"light", note:"Climbing tonight. Nothing that loads elbow or grip. Nine minutes and out.",
-      blocks:[{m:"lateral",sets:4,rest:45},{m:"reardelt",sets:3,rest:40}]},
-  5: {name:"Press B",   tag:"hard",  note:"Same press as Monday, tracked separately. You'll get stronger on one before the other.",
-      blocks:[{m:"press",sets:3,rest:90},{m:"curl",sets:3,rest:60},{m:"ohext",sets:2,rest:60}]},
-  6: {name:"Tendon · shoulder & knee", tag:"tendon", note:"Boring on purpose. Push the furniture as hard as you physically can. Nothing moves, so there is no risk in going all out.",
-      blocks:[{m:"doorpress",sets:3,rest:60},{m:"splitsq",sets:3,rest:45}]},
-  0: {name:"Tendon · elbow",           tag:"tendon", note:"Same idea, elbows today. Then one set of swings and you're done for the week.",
-      blocks:[{m:"tablecurl",sets:3,rest:60},{m:"tablepush",sets:3,rest:60},{m:"swing",sets:1,rest:0}]}
+  1: {name:"Press A",   blocks:[{m:"press",sets:3,rest:90},{m:"lateral",sets:3,rest:45},{m:"reardelt",sets:2,rest:40}]},
+  2: {name:"Arms",      blocks:[{m:"curl",sets:4,rest:60},{m:"ohext",sets:3,rest:60},{m:"reardelt",sets:2,rest:40}]},
+  3: {name:"Chest",     blocks:[{m:"pushup",sets:4,rest:75},{m:"lateral",sets:3,rest:45},{m:"swing",sets:1,rest:0}]},
+  4: {name:"Delts only",blocks:[{m:"lateral",sets:4,rest:45},{m:"reardelt",sets:3,rest:40}]},
+  5: {name:"Press B",   blocks:[{m:"press",sets:3,rest:90},{m:"curl",sets:3,rest:60},{m:"ohext",sets:2,rest:60}]},
+  6: {name:"Tendon · shoulder & knee", blocks:[{m:"doorpress",sets:3,rest:60},{m:"splitsq",sets:3,rest:45}]},
+  0: {name:"Tendon · elbow",           blocks:[{m:"tablecurl",sets:3,rest:60},{m:"tablepush",sets:3,rest:60},{m:"swing",sets:1,rest:0}]}
 };
 
 /* Weeks 1–2 hold you back on purpose: 3–4 reps in reserve, no vest, no progression. */

@@ -62,7 +62,9 @@ nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;st
 .hero{padding:2px 0 0}
 .hero .d{font-size:42px;line-height:1.04;margin-top:10px;font-weight:600;letter-spacing:-.03em}
 .streakbar{display:flex;align-items:baseline;gap:16px;margin-top:34px}
-.streakN{font-size:82px;line-height:.84;font-weight:700;letter-spacing:-.055em;color:var(--acc);
+.streakN{font-size:82px;line-height:.84;font-weight:700;letter-spacing:-.055em;color:var(--faint);
+  transition:color .4s ease;}
+.streakN.live{color:var(--acc);
   font-variant-numeric:tabular-nums}
 .streakL{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);font-weight:500;line-height:1.5}
 .mstone{margin-top:26px;font-size:16.5px;line-height:1.6;font-weight:300;color:#E4E5E7}
@@ -78,9 +80,20 @@ nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;st
   border-bottom:1px solid var(--line);font-size:14.5px;font-weight:400}
 .plan li:last-child{border-bottom:0;padding-bottom:0}
 .plan .s{color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:300}
-.badge{display:inline-block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;
-  padding:4px 10px;border-radius:999px;color:var(--dim);background:var(--panel2);
-  border:1px solid var(--line);vertical-align:2px}
+.plan .n{color:var(--faint);font-variant-numeric:tabular-nums;font-weight:400;
+  min-width:16px;flex:0 0 auto}
+.plan .nm{flex:1;min-width:0}
+details.cue{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+details.cue summary{list-style:none;cursor:pointer;font-size:12.5px;color:var(--faint);
+  font-weight:500;letter-spacing:.02em;display:flex;align-items:center;gap:7px}
+details.cue summary::-webkit-details-marker{display:none}
+details.cue summary::after{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;
+  border-bottom:1.5px solid currentColor;transform:rotate(45deg);transition:transform .25s ease;margin-top:-3px}
+details.cue[open] summary::after{transform:rotate(-135deg);margin-top:2px}
+details.cue .body{margin-top:12px}
+details.cue p{font-size:13.5px;color:var(--dim);line-height:1.6;font-weight:300;margin-top:11px}
+details.cue p:first-child{margin-top:0}
+details.cue b{color:var(--pale);font-weight:500}
 .onramp,.nudge{margin-top:20px;font-size:13.5px;color:var(--dim);line-height:1.6;font-weight:300;
   background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px 17px}
 .onramp b,.nudge b{color:var(--pale);font-weight:600}
@@ -226,7 +239,6 @@ nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;st
       <span class="pips" id="pips"></span>
       <span class="big mono" id="clock">0:00</span>
       <span class="target" id="target"></span>
-      <span class="cue" id="cueLine"></span>
       <span class="deltaline mono" id="delta"></span>
     </button>
     <div class="foot">
@@ -276,8 +288,6 @@ nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;st
     <div class="nudge" id="nudge" style="display:none"></div>
     <button class="go" id="startBtn">Start session</button>
     <div class="card">
-      <h3 id="planTitle">Today</h3>
-      <p class="muted" id="planNote"></p>
       <ul class="plan" id="planList"></ul>
     </div>
   </section>
@@ -286,7 +296,6 @@ nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;st
   <section class="page" id="p-routine">
     <span class="kick">The week</span>
     <h1 style="font-size:30px;margin:6px 0 4px">Routine</h1>
-    <p class="muted">Volleyball Monday and Wednesday, climbing Thursday. Fifteen minutes a day, three movements, never more.</p>
     <div id="routineList"></div>
   </section>
 
@@ -317,22 +326,19 @@ nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;st
     </div>
     <div class="card"><h3>Personal records</h3><div id="prs"></div></div>
     <div class="card"><h3>When you train</h3>
-      <p class="muted">One bar per hour of the day.</p>
       <div class="bars" id="hourBars"></div>
       <div class="muted mono" id="hourNote" style="margin-top:8px"></div></div>
     <div class="card"><h3>Session length</h3>
-      <p class="muted">How long it really takes, against the fifteen minutes it promises.</p>
       <div class="spark" id="lenSpark"></div>
       <div class="muted mono" id="lenNote" style="margin-top:8px"></div></div>
     <div class="card"><h3>Bodyweight</h3>
-      <p class="muted">One number, once a week. If it is not going up over a month, eat more.</p>
       <div class="spark" id="wtSpark"></div>
       <div class="row" style="margin-top:12px">
         <input type="number" id="wtIn" step="0.1" placeholder="lb" style="flex:1">
         <button class="go small" id="wtSave" style="width:auto;margin:0;padding:11px 18px">Save</button></div>
       <div class="muted mono" id="wtNote" style="margin-top:8px"></div></div>
     <div class="card"><h3>Your data</h3>
-      <p class="muted">Everything is stored in this browser and nowhere else. Clear the site data and it is gone. Export it now and then.</p>
+      <p class="muted">This browser only. Export now and then.</p>
       <div style="display:flex;gap:10px;margin-top:12px">
         <button class="go small" id="expBtn" style="margin:0">Export</button>
         <button class="go small" id="impBtn" style="margin:0">Import</button></div>
