@@ -35,6 +35,14 @@ button{font:inherit;font-family:var(--font);color:inherit;background:none;border
 input{font:inherit;font-family:var(--font);color:inherit;background:var(--panel);
   border:1px solid var(--line);border-radius:14px;padding:.85rem 1rem}
 input:focus{outline:none;border-color:rgba(255,255,255,.22)}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;border:0;
+  padding:0;height:26px}
+input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;
+  border-radius:50%;background:var(--pale);margin-top:-9.5px;border:0}
+input[type=range]::-moz-range-track{height:5px;border-radius:3px;background:var(--line)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;
+  background:var(--pale);border:0}
 :focus-visible{outline:2px solid rgba(255,255,255,.5);outline-offset:3px}
 h1,h2,h3{font-weight:600;letter-spacing:-.021em}
 .mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
@@ -125,6 +133,8 @@ details.cue b{color:var(--pale);font-weight:500}
 .exname{font-size:26px;line-height:1.14;margin-top:14px;max-width:18ch;color:var(--ink);
   font-weight:500;letter-spacing:-.022em}
 .pips{display:flex;gap:7px;justify-content:center;margin-top:18px}
+.setnow{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--mut);margin-top:10px;min-height:15px}
 .pips i{display:block;width:24px;height:3px;border-radius:2px;background:rgba(255,255,255,.15);
   transition:background .3s ease}
 .pips i.done{background:var(--mut)}.pips i.cur{background:var(--acc)}
@@ -268,6 +278,7 @@ details.cue b{color:var(--pale);font-weight:500}
       <span class="phase" id="phaseLbl">Working</span>
       <span class="exname" id="exName">—</span>
       <span class="pips" id="pips"></span>
+      <span class="setnow" id="setNow"></span>
       <span class="big mono" id="clock">0:00</span>
       <span class="target" id="target"></span>
       <span class="deltaline mono" id="delta"></span>
@@ -370,9 +381,16 @@ details.cue b{color:var(--pale);font-weight:500}
         <input type="number" id="wtIn" step="0.1" placeholder="lb" style="flex:1">
         <button class="go small" id="wtSave" style="width:auto;margin:0;padding:11px 18px">Save</button></div>
       <div class="muted mono" id="wtNote" style="margin-top:8px"></div></div>
+    <div class="card"><h3>Sound</h3>
+      <p class="muted">Cue volume. Test it with your music playing at the level you actually train at.</p>
+      <div class="row" style="margin-top:14px;align-items:center;gap:14px">
+        <input type="range" id="volIn" min="0" max="200" step="10" value="100" style="flex:1">
+        <button class="go small" id="volTest" style="width:auto;margin:0;padding:11px 18px">Test</button></div>
+      <div class="muted mono" id="volNote" style="margin-top:8px">100%</div></div>
     <div class="card"><h3>Your data</h3>
-      <p class="muted">This browser only. Export now and then.</p>
+      <p class="muted">This browser only. Copy hands you the whole log as text — paste it into a chat. Export saves a file.</p>
       <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="go small" id="cpyBtn" style="margin:0">Copy</button>
         <button class="go small" id="expBtn" style="margin:0">Export</button>
         <button class="go small" id="impBtn" style="margin:0">Import</button></div>
       <input type="file" id="impFile" accept="application/json" style="display:none"></div>

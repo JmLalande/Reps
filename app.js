@@ -18,7 +18,7 @@ function get(store,key){return new Promise((res,rej)=>{const q=tx(store,"readonl
   q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error);});}
 
 /* ------------------------------------------------------------------ state */
-let SESSIONS={}, META={k:"app",poolSeen:[],lastBreak:-1,sound:true,firstDay:null,lastStreak:0}, WEIGHTS=[];
+let SESSIONS={}, META={k:"app",poolSeen:[],lastBreak:-1,sound:true,vol:1,firstDay:null,lastStreak:0}, WEIGHTS=[];
 const $=id=>document.getElementById(id);
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const todayISO=()=>iso(new Date());
@@ -96,7 +96,7 @@ function renderToday(){
 
   const nudge=progressionNudge(), nd=$("nudge");
   if(nudge){nd.style.display="block";
-    nd.innerHTML="<b>"+nudge.short+": top of the range twice.</b> "+LADDER;}
+    nd.innerHTML="<b>"+nudge.short+": top of the range twice.</b> "+(M[nudge.m].next||LADDER);}
   else nd.style.display="none";
 
   const done=SESSIONS[todayISO()];
@@ -230,23 +230,37 @@ function sizeRing(){
 }
 if(window.ResizeObserver)new ResizeObserver(sizeRing).observe(appEl);else addEventListener("resize",sizeRing);
 
-let actx=null;
+/* A sine at .045 gain is inaudible against music in headphones — that was the
+   first version. A square wave through a gentle lowpass carries far better at
+   the same amplitude, and the compressor lets VOL push past 1 without clipping.
+   VOL is yours to set in Settings; 1 is the default. */
+let actx=null,comp=null,VOL=1;
+function audio(){
+  if(!actx){
+    actx=new (window.AudioContext||window.webkitAudioContext)();
+    comp=actx.createDynamicsCompressor();
+    comp.threshold.value=-16;comp.ratio.value=8;comp.attack.value=.002;comp.release.value=.12;
+    comp.connect(actx.destination);
+  }
+  if(actx.state==="suspended")actx.resume();
+  return actx;
+}
 function tone(f,d,g,type){
   if(!sound)return;
   try{
-    if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();
-    if(actx.state==="suspended")actx.resume();
-    const o=actx.createOscillator(),v=actx.createGain();
-    o.type=type||"sine";o.frequency.value=f;v.gain.value=0;o.connect(v);v.connect(actx.destination);
-    const t=actx.currentTime;
-    v.gain.linearRampToValueAtTime(g||.07,t+.012);
-    v.gain.exponentialRampToValueAtTime(.0001,t+(d||.1));
-    o.start(t);o.stop(t+(d||.1)+.02);
+    const a=audio(),t=a.currentTime,dur=d||.1;
+    const o=a.createOscillator(),v=a.createGain(),lp=a.createBiquadFilter();
+    o.type=type||"square";o.frequency.value=f;
+    lp.type="lowpass";lp.frequency.value=Math.min(f*3.4,14000);lp.Q.value=.5;
+    v.gain.value=0;o.connect(lp);lp.connect(v);v.connect(comp);
+    v.gain.linearRampToValueAtTime(Math.max(.0002,(g||.5)*VOL),t+.008);
+    v.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.start(t);o.stop(t+dur+.03);
   }catch(e){}
 }
-/* the ramp: five soft ticks rising, then one low tone. never an alarm. */
-function tick(n){tone(880,.085,.045);if(navigator.vibrate)navigator.vibrate(14);}
-function goTone(){tone(1320,.22,.07);if(navigator.vibrate)navigator.vibrate([26,50,26]);}
+/* the ramp: three ticks rising, then one bright tone. never an alarm. */
+function tick(n){tone(n>=3?740:(n===2?880:1046),.09,.5);if(navigator.vibrate)navigator.vibrate(18);}
+function goTone(){tone(1320,.26,.8);if(navigator.vibrate)navigator.vibrate([30,60,30]);}
 
 function startSession(){
   dayKey=new Date().getDay();
@@ -264,6 +278,7 @@ function startSession(){
 }
 function plannedTotal(){return PH.reduce((a,p)=>a+p.dur,0);}
 function remaining(){let r=Math.max(0,PH[idx].dur-el);for(let i=idx+1;i<PH.length;i++)r+=PH[i].dur;return r;}
+const setLbl=p=>p.sets>1?"Set "+p.set+" of "+p.sets:"Single set";
 function setPips(n,cur){let h="";for(let i=1;i<=n;i++)h+='<i class="'+(i<cur?"done":(i===cur?"cur":""))+'"></i>';$("pips").innerHTML=h;}
 let deltaTimer=null;
 function flashDelta(sec){
@@ -286,10 +301,11 @@ function render(){
   const show=work?p:(nextW||p),sm=M[show.m];
   $("exName").textContent=work?m.name:(nextW?sm.name:"Session ends");
   setPips(show.sets,show.set);
+  $("setNow").textContent=show.sets>1?"Set "+show.set+" of "+show.sets:"";
   $("target").innerHTML="<b>"+sm.reps+"</b>"+(sm.side?" "+sm.side:(sm.hold?"":" reps"))+" · <b>"+sm.load+"</b>";
   $("nextLbl").textContent=work
-    ?(PH[idx+1]?"Rest "+fmt(PH[idx+1].dur)+(nextW?", then "+M[nextW.m].short+" · Set "+nextW.set:""):"Last set")
-    :(nextW?M[nextW.m].short+" · Set "+nextW.set:"Session ends");
+    ?(PH[idx+1]?"Rest "+fmt(PH[idx+1].dur)+(nextW?", then "+M[nextW.m].short+" · "+setLbl(nextW):""):"Last set")
+    :(nextW?M[nextW.m].short+" · "+setLbl(nextW):"Session ends");
   const end=new Date(Date.now()+remaining()*1000);
   $("endAt").textContent=String(end.getHours()).padStart(2,"0")+":"+String(end.getMinutes()).padStart(2,"0");
   const green=Object.keys(SESSIONS).length<4;
@@ -305,8 +321,8 @@ function endWork(){
   p.actual=el;drift+=delta;flashDelta(delta);
   pendingWork={m:p.m,set:p.set,sets:p.sets};
   idx++;el=0;
-  if(idx>=PH.length){finishing=true;openLog();tone(520,.14,.06);return;}
-  holding=true;openLog();tone(520,.14,.06);render();
+  if(idx>=PH.length){finishing=true;openLog();tone(520,.16,.45);return;}
+  holding=true;openLog();tone(520,.16,.45);render();
 }
 function endRest(){
   const p=PH[idx];p.actual=el;drift+=(el-p.dur);idx++;el=0;tickMark=-1;
@@ -424,9 +440,10 @@ function renderEdList(){
   const s=SESSIONS[edDate];
   if(!s.sets.length){$("edList").innerHTML="<p class='muted'>No sets left on this day.</p>";return;}
   let h="<div class='edlab'><span>Reps</span><span>RIR</span></div>";
+  const tally={};s.sets.forEach(x=>tally[x.m]=(tally[x.m]||0)+1);
   h+=s.sets.map((x,i)=>{
-    const m=M[x.m];
-    return "<div class='edrow'><span class='who'>"+m.name+"<small>Set "+x.set+"</small></span>"+
+    const m=M[x.m],n=tally[x.m];
+    return "<div class='edrow'><span class='who'>"+m.name+"<small>Set "+x.set+(n>1?" of "+n:"")+"</small></span>"+
       "<input type='number' inputmode='numeric' value='"+x.reps+"' data-i='"+i+"' data-f='reps'>"+
       "<select data-i='"+i+"' data-f='rir'>"+[0,1,2,3,4].map(n=>
         "<option value='"+n+"'"+(x.rir===n?" selected":"")+">"+(n===4?"4+":n)+"</option>").join("")+"</select>"+
@@ -477,13 +494,13 @@ $("editor").addEventListener("click",e=>{if(e.target.id==="editor"){$("editor").
 /* ------------------------------------------------------------------- wire */
 $("field").addEventListener("click",()=>{
   if(done||holding)return;
-  if(!actx&&sound){try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+  if(sound){try{audio();}catch(e){}}
   if(PH[idx].type==="work")endWork();else endRest();
 });
 $("repMinus").addEventListener("click",()=>bumpRep(-1));
 $("repPlus").addEventListener("click",()=>bumpRep(1));
 $("sndBtn").addEventListener("click",function(){sound=!sound;this.setAttribute("aria-pressed",sound?"true":"false");
-  META.sound=sound;put("meta",META);if(sound)tone(660,.08,.05);});
+  META.sound=sound;put("meta",META);if(sound)tone(660,.1,.5);});
 $("quitBtn").addEventListener("click",leaveSession);
 $("doneBtn").addEventListener("click",leaveSession);
 $("startBtn").addEventListener("click",startSession);
@@ -504,12 +521,22 @@ $("wtSave").addEventListener("click",async()=>{
   WEIGHTS=WEIGHTS.filter(x=>x.date!==rec.date);WEIGHTS.push(rec);
   $("wtIn").value="";renderStats();toast("Saved");
 });
+const dump=()=>JSON.stringify({sessions:Object.values(SESSIONS),meta:META,weights:WEIGHTS},null,2);
 $("expBtn").addEventListener("click",()=>{
-  const blob=new Blob([JSON.stringify({sessions:Object.values(SESSIONS),meta:META,weights:WEIGHTS},null,2)],
-    {type:"application/json"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([dump()],{type:"application/json"}));
   a.download="reps-"+todayISO()+".json";a.click();URL.revokeObjectURL(a.href);
 });
+$("cpyBtn").addEventListener("click",async()=>{
+  try{await navigator.clipboard.writeText(dump());toast("Copied — paste it anywhere");}
+  catch(e){toast("Could not reach the clipboard");}
+});
+$("volIn").addEventListener("input",e=>{
+  VOL=(+e.target.value)/100;$("volNote").textContent=e.target.value+"%";});
+$("volIn").addEventListener("change",async e=>{
+  META.vol=(+e.target.value)/100;await put("meta",META);tone(1046,.18,.6);});
+$("volTest").addEventListener("click",()=>{
+  tick(3);setTimeout(()=>tick(2),800);setTimeout(()=>tick(1),1600);setTimeout(goTone,2400);});
 $("impBtn").addEventListener("click",()=>$("impFile").click());
 $("impFile").addEventListener("change",async e=>{
   const f=e.target.files[0];if(!f)return;
@@ -527,6 +554,8 @@ async function load(){
   const s=await all("sessions");SESSIONS={};s.forEach(x=>SESSIONS[x.date]=x);
   const m=await get("meta","app");if(m)META=Object.assign(META,m);
   sound=META.sound!==false;$("sndBtn").setAttribute("aria-pressed",sound?"true":"false");
+  VOL=typeof META.vol==="number"?META.vol:1;
+  $("volIn").value=Math.round(VOL*100);$("volNote").textContent=Math.round(VOL*100)+"%";
   WEIGHTS=await all("weights");
   renderToday();renderRoutine();renderHistory();renderStats();
 }
