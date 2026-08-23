@@ -26,7 +26,7 @@ const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%6
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v10";
+const APP_VERSION="v11";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 function computeStreak(){
   let n=0,d=new Date();
