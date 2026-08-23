@@ -1,4 +1,4 @@
-const CACHE_NAME = 'reps-v8';
+const CACHE_NAME = 'reps-v9';
 const ASSETS = ['./','./index.html','./app.js','./program.js','./milestones.js','./manifest.json'];
 
 self.addEventListener('install', e => {

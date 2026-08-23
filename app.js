@@ -91,7 +91,7 @@ function renderToday(){
   const or=$("onramp");
   if(onRamp()){
     or.style.display="block";
-    or.textContent="Easy weeks, "+daysSinceStart()+"/"+ONRAMP_DAYS+" · leave 3-4 in reserve, no vest";
+    or.textContent="Easy weeks, "+daysSinceStart()+"/"+ONRAMP_DAYS+" · leave 3–4 in reserve, no vest";
   }else or.style.display="none";
 
   const nudge=progressionNudge(), nd=$("nudge");
@@ -149,11 +149,11 @@ function renderHistory(){
   const list=Object.values(SESSIONS).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12);
   $("recent").innerHTML=list.length?list.map(s=>{
     const dt=new Date(s.date+"T12:00:00");
-    const t=s.startedAt?new Date(s.startedAt).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}):"—";
+    const t=s.startedAt?new Date(s.startedAt).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}):"";
     return "<div class='stat' data-edit='"+s.date+"' style='cursor:pointer'><span>"+
       dt.toLocaleDateString(undefined,{month:"short",day:"numeric"})+
       " · "+WEEK[s.dayKey].name+"<br><span class='muted'>"+(s.sets||[]).length+((s.sets||[]).length===1?" set · ":" sets · ")+t+"</span></span>"+
-      "<span class='v mono'>"+(s.actualSec?fmt(s.actualSec):"—")+"</span></div>";
+      "<span class='v mono'>"+(s.actualSec?fmt(s.actualSec):"")+"</span></div>";
   }).join(""):"<p class='muted'>Nothing yet.</p>";
   document.querySelectorAll("[data-edit]").forEach(el=>{
     if(el._wired)return; el._wired=1;
@@ -230,17 +230,18 @@ function sizeRing(){
 }
 if(window.ResizeObserver)new ResizeObserver(sizeRing).observe(appEl);else addEventListener("resize",sizeRing);
 
-/* A sine at .045 gain is inaudible against music in headphones — that was the
-   first version. A square wave through a gentle lowpass carries far better at
-   the same amplitude, and the compressor lets VOL push past 1 without clipping.
-   VOL is yours to set in Settings; 1 is the default. */
-let actx=null,comp=null,VOL=1;
+/* The tones are the ones you picked: sine, same pitches, same envelopes. What
+   changed is level. The old .045 gain sat under any music playing alongside it.
+   Everything here is roughly eleven times that, and the limiter only engages
+   when the volume slider goes past 100%, so at 100% you hear the sine clean. */
+let actx=null,lim=null,VOL=1;
 function audio(){
   if(!actx){
     actx=new (window.AudioContext||window.webkitAudioContext)();
-    comp=actx.createDynamicsCompressor();
-    comp.threshold.value=-16;comp.ratio.value=8;comp.attack.value=.002;comp.release.value=.12;
-    comp.connect(actx.destination);
+    lim=actx.createDynamicsCompressor();
+    lim.threshold.value=-3;lim.knee.value=6;lim.ratio.value=12;
+    lim.attack.value=.003;lim.release.value=.1;
+    lim.connect(actx.destination);
   }
   if(actx.state==="suspended")actx.resume();
   return actx;
@@ -249,18 +250,17 @@ function tone(f,d,g,type){
   if(!sound)return;
   try{
     const a=audio(),t=a.currentTime,dur=d||.1;
-    const o=a.createOscillator(),v=a.createGain(),lp=a.createBiquadFilter();
-    o.type=type||"square";o.frequency.value=f;
-    lp.type="lowpass";lp.frequency.value=Math.min(f*3.4,14000);lp.Q.value=.5;
-    v.gain.value=0;o.connect(lp);lp.connect(v);v.connect(comp);
-    v.gain.linearRampToValueAtTime(Math.max(.0002,(g||.5)*VOL),t+.008);
+    const o=a.createOscillator(),v=a.createGain();
+    o.type=type||"sine";o.frequency.value=f;
+    v.gain.value=0;o.connect(v);v.connect(lim);
+    v.gain.linearRampToValueAtTime(Math.max(.0002,(g||.5)*VOL),t+.012);
     v.gain.exponentialRampToValueAtTime(.0001,t+dur);
-    o.start(t);o.stop(t+dur+.03);
+    o.start(t);o.stop(t+dur+.02);
   }catch(e){}
 }
-/* the ramp: three ticks rising, then one bright tone. never an alarm. */
-function tick(n){tone(n>=3?740:(n===2?880:1046),.09,.5);if(navigator.vibrate)navigator.vibrate(18);}
-function goTone(){tone(1320,.26,.8);if(navigator.vibrate)navigator.vibrate([30,60,30]);}
+/* the ramp: three soft ticks, then one bright tone. never an alarm. */
+function tick(n){tone(880,.085,.5);if(navigator.vibrate)navigator.vibrate(14);}
+function goTone(){tone(1320,.22,.77);if(navigator.vibrate)navigator.vibrate([26,50,26]);}
 
 function startSession(){
   dayKey=new Date().getDay();
@@ -328,8 +328,8 @@ function endWork(){
   p.actual=el;drift+=delta;flashDelta(delta);
   pendingWork={m:p.m,set:p.set,sets:p.sets,def:p.def,rir:p.rir};
   idx++;el=0;
-  if(idx>=PH.length){finishing=true;openLog();tone(520,.16,.45);return;}
-  holding=true;openLog();tone(520,.16,.45);render();
+  if(idx>=PH.length){finishing=true;openLog();tone(520,.14,.66);return;}
+  holding=true;openLog();tone(520,.14,.66);render();
 }
 function endRest(){
   const p=PH[idx];p.actual=el;drift+=(el-p.dur);idx++;el=0;tickMark=-1;
@@ -385,7 +385,7 @@ function commitLog(rir){
   logged.push({m:pendingWork.m,set:pendingWork.set,reps:repVal,rir:rir,ts:Date.now()});
   holding=false;pendingWork=null;
   $("log").classList.remove("on");$("log").setAttribute("aria-hidden","true");
-  tone(isPr?990:880,.12,.06);
+  tone(isPr?990:880,.12,.66);
   saveSession(false);
   if(finishing){finish();return;}
   render();
@@ -422,7 +422,7 @@ async function saveSession(complete,actual){
 function leaveSession(){
   $("sess").classList.remove("on");
   /* `done` means finish() already stored the session complete. Saving again
-     here would overwrite that flag and drop actualSec — which is exactly what
+     here would overwrite that flag and drop actualSec. That is exactly what
      the Done button used to do. */
   if(logged.length&&!done)saveSession(false);
   renderToday();renderHistory();renderStats();
@@ -523,7 +523,7 @@ $("field").addEventListener("click",()=>{
 $("repMinus").addEventListener("click",()=>bumpRep(-1));
 $("repPlus").addEventListener("click",()=>bumpRep(1));
 $("sndBtn").addEventListener("click",function(){sound=!sound;this.setAttribute("aria-pressed",sound?"true":"false");
-  META.sound=sound;put("meta",META);if(sound)tone(660,.1,.5);});
+  META.sound=sound;put("meta",META);if(sound)tone(660,.08,.55);});
 $("quitBtn").addEventListener("click",leaveSession);
 $("doneBtn").addEventListener("click",leaveSession);
 $("startBtn").addEventListener("click",startSession);
@@ -550,21 +550,29 @@ $("expBtn").addEventListener("click",()=>{
   a.href=URL.createObjectURL(new Blob([dump()],{type:"application/json"}));
   a.download="reps-"+todayISO()+".json";a.click();URL.revokeObjectURL(a.href);
 });
-$("pstBtn").addEventListener("click",async()=>{
-  let txt="";
-  try{txt=await navigator.clipboard.readText();}
-  catch(e){toast("Let the app read the clipboard, or use Import");return;}
-  try{await ingest(JSON.parse(txt));toast("Imported");}
-  catch(err){toast("That was not a Reps export");}
+/* Reading the clipboard needs a permission Android quietly refuses inside an
+   installed app, and it fails silently. A box you paste into always works. */
+$("pstBtn").addEventListener("click",()=>{
+  const b=$("pasteBox"),shown=b.style.display==="block";
+  b.style.display=shown?"none":"block";
+  if(!shown)$("pasteIn").focus();
+});
+$("pasteGo").addEventListener("click",async()=>{
+  const raw=$("pasteIn").value.trim().replace(/^```[a-z]*/i,"").replace(/```$/,"").trim();
+  if(!raw){toast("The box is empty");return;}
+  let d;
+  try{d=JSON.parse(raw);}catch(e){toast("That text is not valid JSON");return;}
+  try{await ingest(d);}catch(e){toast("Valid JSON, but not a Reps export");return;}
+  $("pasteIn").value="";$("pasteBox").style.display="none";toast("Imported");
 });
 $("cpyBtn").addEventListener("click",async()=>{
-  try{await navigator.clipboard.writeText(dump());toast("Copied — paste it anywhere");}
-  catch(e){toast("Could not reach the clipboard");}
+  try{await navigator.clipboard.writeText(dump());toast("Copied");}
+  catch(e){toast("Your browser blocked the clipboard");}
 });
 $("volIn").addEventListener("input",e=>{
   VOL=(+e.target.value)/100;$("volNote").textContent=e.target.value+"%";});
 $("volIn").addEventListener("change",async e=>{
-  META.vol=(+e.target.value)/100;await put("meta",META);tone(1046,.18,.6);});
+  META.vol=(+e.target.value)/100;await put("meta",META);tone(880,.085,.6);});
 $("volTest").addEventListener("click",()=>{
   tick(3);setTimeout(()=>tick(2),800);setTimeout(()=>tick(1),1600);setTimeout(goTone,2400);});
 $("impBtn").addEventListener("click",()=>$("impFile").click());

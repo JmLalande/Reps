@@ -56,6 +56,12 @@ h1,h2,h3{font-weight:600;letter-spacing:-.021em}
 .card h3{font-size:18px;margin-bottom:6px;font-weight:600}
 .muted{color:var(--dim);font-size:14.5px;line-height:1.62;font-weight:300}
 .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.datagrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.datagrid .go{margin:0;width:100%}
+textarea{font:inherit;font-family:var(--mono,inherit);font-size:13px;width:100%;
+  color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:.8rem .9rem;resize:vertical}
+textarea:focus{outline:none;border-color:rgba(255,255,255,.22)}
 
 nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(8,9,10,.82);
   backdrop-filter:blur(20px) saturate(140%);border-top:1px solid var(--line);
@@ -279,7 +285,7 @@ details.cue b{color:var(--pale);font-weight:500}
     </div>
     <button class="field" id="field">
       <span class="phase" id="phaseLbl">Working</span>
-      <span class="exname" id="exName">—</span>
+      <span class="exname" id="exName"></span>
       <span class="pips" id="pips"></span>
       <span class="setnow" id="setNow"></span>
       <span class="big mono" id="clock">0:00</span>
@@ -288,13 +294,13 @@ details.cue b{color:var(--pale);font-weight:500}
       <span class="deltaline mono" id="delta"></span>
     </button>
     <div class="foot">
-      <div class="upnext">Up next<span id="nextLbl">—</span></div>
-      <div class="hint" id="hint">Tap anywhere when the set is done · ends <b id="endAt">—</b></div>
+      <div class="upnext">Up next<span id="nextLbl"></span></div>
+      <div class="hint" id="hint">Tap anywhere when the set is done · ends <b id="endAt"></b></div>
     </div>
 
     <div class="log" id="log" aria-hidden="true">
       <div class="top"><span class="t">Logging</span><span class="r mono" id="logRest">0:00</span></div>
-      <h2 id="logName">—</h2>
+      <h2 id="logName"></h2>
       <div class="setline" id="logSet"></div>
       <div class="prtag" id="prTag">Personal record</div>
       <div class="repbox">
@@ -322,14 +328,14 @@ details.cue b{color:var(--pale);font-weight:500}
   <!-- TODAY -->
   <section class="page on" id="p-today">
     <div class="hero">
-      <span class="kick" id="todayDate">—</span>
-      <div class="d" id="todayName">—</div>
+      <span class="kick" id="todayDate"></span>
+      <div class="d" id="todayName"></div>
     </div>
     <div class="streakbar">
       <span class="streakN mono" id="streakN">0</span>
       <span class="streakL">day<br>streak</span>
     </div>
-    <div class="mstone" id="mstone">—</div>
+    <div class="mstone" id="mstone"></div>
     <div class="tease" id="tease"></div>
     <div class="onramp" id="onramp" style="display:none"></div>
     <div class="nudge" id="nudge" style="display:none"></div>
@@ -352,7 +358,7 @@ details.cue b{color:var(--pale);font-weight:500}
     <span class="kick">Every day</span>
     <h1 style="font-size:30px;margin:6px 0 4px">History</h1>
     <div class="card">
-      <div class="row"><h3 id="calMonth">—</h3>
+      <div class="row"><h3 id="calMonth"></h3>
         <span><button class="go small" id="calPrev" style="display:inline-block;width:auto;margin:0;padding:6px 12px">←</button>
         <button class="go small" id="calNext" style="display:inline-block;width:auto;margin:0;padding:6px 12px">→</button></span></div>
       <div class="cal" id="cal"></div>
@@ -386,18 +392,21 @@ details.cue b{color:var(--pale);font-weight:500}
         <button class="go small" id="wtSave" style="width:auto;margin:0;padding:11px 18px">Save</button></div>
       <div class="muted mono" id="wtNote" style="margin-top:8px"></div></div>
     <div class="card"><h3>Sound</h3>
-      <p class="muted">Cue volume. Test it with your music playing at the level you actually train at.</p>
+      <p class="muted">Cue volume. Test it with your music on, at the volume you train at.</p>
       <div class="row" style="margin-top:14px;align-items:center;gap:14px">
         <input type="range" id="volIn" min="0" max="200" step="10" value="100" style="flex:1">
         <button class="go small" id="volTest" style="width:auto;margin:0;padding:11px 18px">Test</button></div>
       <div class="muted mono" id="volNote" style="margin-top:8px">100%</div></div>
     <div class="card"><h3>Your data</h3>
-      <p class="muted">This browser only. Copy hands you the whole log as text — paste it into a chat. Export saves a file.</p>
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button class="go small" id="cpyBtn" style="margin:0">Copy</button>
-        <button class="go small" id="pstBtn" style="margin:0">Paste</button>
-        <button class="go small" id="expBtn" style="margin:0">Export</button>
-        <button class="go small" id="impBtn" style="margin:0">Import</button></div>
+      <p class="muted">Saved in this browser only. Copy takes the log out as text. Paste puts one back.</p>
+      <div class="datagrid">
+        <button class="go small" id="cpyBtn">Copy</button>
+        <button class="go small" id="pstBtn">Paste</button>
+        <button class="go small" id="expBtn">Export</button>
+        <button class="go small" id="impBtn">Import</button></div>
+      <div id="pasteBox" style="display:none;margin-top:12px">
+        <textarea id="pasteIn" rows="4" placeholder="Paste an export here"></textarea>
+        <button class="go small" id="pasteGo" style="width:100%;margin-top:10px">Load it</button></div>
       <input type="file" id="impFile" accept="application/json" style="display:none"></div>
   </section>
 </div>
@@ -405,7 +414,7 @@ details.cue b{color:var(--pale);font-weight:500}
 <div class="editor" id="editor">
   <div class="ed">
     <div class="edtop">
-      <div><div class="kick" id="edDate">—</div><h2 id="edDay" style="font-size:24px;margin-top:5px">—</h2></div>
+      <div><div class="kick" id="edDate"></div><h2 id="edDay" style="font-size:24px;margin-top:5px"></h2></div>
       <button class="iconbtn" id="edClose" aria-label="Close">
         <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
