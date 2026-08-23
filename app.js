@@ -26,6 +26,7 @@ const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%6
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
+const APP_VERSION="v10";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 function computeStreak(){
   let n=0,d=new Date();
@@ -522,8 +523,15 @@ $("field").addEventListener("click",()=>{
 });
 $("repMinus").addEventListener("click",()=>bumpRep(-1));
 $("repPlus").addEventListener("click",()=>bumpRep(1));
-$("sndBtn").addEventListener("click",function(){sound=!sound;this.setAttribute("aria-pressed",sound?"true":"false");
-  META.sound=sound;put("meta",META);if(sound)tone(660,.08,.55);});
+function setSound(on){
+  sound=on;
+  $("sndBtn").setAttribute("aria-pressed",on?"true":"false");
+  $("sndToggle").textContent=on?"Cues on":"Cues off";
+  META.sound=on;put("meta",META);
+  if(on)tone(660,.08,.55);
+}
+$("sndBtn").addEventListener("click",()=>setSound(!sound));
+$("sndToggle").addEventListener("click",()=>setSound(!sound));
 $("quitBtn").addEventListener("click",leaveSession);
 $("doneBtn").addEventListener("click",leaveSession);
 $("startBtn").addEventListener("click",startSession);
@@ -594,11 +602,26 @@ async function ingest(d){
 async function load(){
   const s=await all("sessions");SESSIONS={};s.forEach(x=>SESSIONS[x.date]=x);
   const m=await get("meta","app");if(m)META=Object.assign(META,m);
-  sound=META.sound!==false;$("sndBtn").setAttribute("aria-pressed",sound?"true":"false");
+  sound=META.sound!==false;
+  $("sndBtn").setAttribute("aria-pressed",sound?"true":"false");
+  $("sndToggle").textContent=sound?"Cues on":"Cues off";
   VOL=typeof META.vol==="number"?META.vol:1;
   $("volIn").value=Math.round(VOL*100);$("volNote").textContent=Math.round(VOL*100)+"%";
   WEIGHTS=await all("weights");
+  $("verNote").textContent=APP_VERSION;
   renderToday();renderRoutine();renderHistory();renderStats();
 }
 open().then(load).catch(()=>{toast("This browser will not let the app save anything");renderToday();renderRoutine();});
-if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+if("serviceWorker" in navigator)addEventListener("load",async()=>{
+  const had=!!navigator.serviceWorker.controller;
+  let reloading=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(!had||reloading)return;
+    reloading=true;location.reload();
+  });
+  try{
+    const reg=await navigator.serviceWorker.register("./sw.js");
+    reg.update();
+    addEventListener("visibilitychange",()=>{if(!document.hidden)reg.update();});
+  }catch(e){}
+});

@@ -1,8 +1,9 @@
-const CACHE_NAME = 'reps-v9';
+const CACHE_NAME = 'reps-v10';
 const ASSETS = ['./','./index.html','./app.js','./program.js','./milestones.js','./manifest.json'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
+  e.waitUntil(caches.open(CACHE_NAME).then(c =>
+    c.addAll(ASSETS.map(u => new Request(u, {cache: 'reload'})))));
   self.skipWaiting();
 });
 self.addEventListener('activate', e => {
