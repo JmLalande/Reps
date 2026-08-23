@@ -144,6 +144,8 @@ details.cue b{color:var(--pale);font-weight:500}
 .big.wide{font-size:clamp(64px,24vw,104px)}
 .target{font-size:16px;color:var(--mut);font-weight:300}
 .target b{color:var(--ink);font-weight:500}
+.effort{font-size:13px;color:var(--mut);font-weight:300;margin-top:7px;opacity:.85;min-height:16px}
+.effort b{color:var(--acc);font-weight:600}
 .deltaline{height:24px;margin-top:16px;font-size:13.5px;color:var(--acc);opacity:0;transition:opacity .35s ease;
   font-variant-numeric:tabular-nums;font-weight:400}
 .deltaline.on{opacity:1}
@@ -187,6 +189,7 @@ details.cue b{color:var(--pale);font-weight:500}
   display:grid;place-items:center;
   transition:background .16s ease,transform .16s ease}
 .rir button:active{background:var(--pale);color:#0A0B0C;transform:scale(.97)}
+.rir button.tgt{border-color:rgba(255,255,255,.42);background:rgba(255,255,255,.07)}
 .rir b{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
 
 /* done */
@@ -281,6 +284,7 @@ details.cue b{color:var(--pale);font-weight:500}
       <span class="setnow" id="setNow"></span>
       <span class="big mono" id="clock">0:00</span>
       <span class="target" id="target"></span>
+      <span class="effort" id="effort"></span>
       <span class="deltaline mono" id="delta"></span>
     </button>
     <div class="foot">
@@ -298,7 +302,7 @@ details.cue b{color:var(--pale);font-weight:500}
         <div class="mid"><b class="mono" id="repVal">0</b><span id="repUnit">reps</span></div>
         <button class="pad" id="repPlus" aria-label="One more">+</button>
       </div>
-      <div class="rirlbl">Reps left in the tank</div>
+      <div class="rirlbl" id="rirLbl">Reps left in the tank</div>
       <div class="rir" id="rir"></div>
     </div>
 
@@ -391,6 +395,7 @@ details.cue b{color:var(--pale);font-weight:500}
       <p class="muted">This browser only. Copy hands you the whole log as text — paste it into a chat. Export saves a file.</p>
       <div style="display:flex;gap:10px;margin-top:12px">
         <button class="go small" id="cpyBtn" style="margin:0">Copy</button>
+        <button class="go small" id="pstBtn" style="margin:0">Paste</button>
         <button class="go small" id="expBtn" style="margin:0">Export</button>
         <button class="go small" id="impBtn" style="margin:0">Import</button></div>
       <input type="file" id="impFile" accept="application/json" style="display:none"></div>

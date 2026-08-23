@@ -108,7 +108,7 @@ function renderToday(){
   $("planList").innerHTML=day.blocks.map((b,i)=>{
     const m=M[b.m];
     return "<li><span class='n'>"+(i+1)+"</span><span class='nm'>"+m.name+"</span><span class='s'>"+
-      b.sets+" × "+m.reps+(b.rest?" · "+b.rest+"s":"")+"</span></li>";
+      b.sets+" × "+blockReps(b)+(b.rest?" · "+b.rest+"s":"")+"</span></li>";
   }).join("");
 }
 
@@ -119,7 +119,7 @@ function renderRoutine(){
     const d=WEEK[dk];
     const rows=d.blocks.map((b,i)=>{const m=M[b.m];
       return "<li><span class='n'>"+(i+1)+"</span><span class='nm'>"+m.name+"</span><span class='s'>"+
-        b.sets+" × "+m.reps+(b.rest?" · "+b.rest+"s":"")+"</span></li>";}).join("");
+        b.sets+" × "+blockReps(b)+(b.rest?" · "+b.rest+"s":"")+"</span></li>";}).join("");
     const cues=d.blocks.map(b=>"<p><b>"+M[b.m].short+".</b> "+M[b.m].cue+"</p>").join("");
     return "<div class='card'><h3>"+DOW[dk]+"</h3><ul class='plan'>"+rows+"</ul>"+
       "<details class='cue'><summary>How to</summary><div class='body'>"+cues+"</div></details></div>";
@@ -264,7 +264,10 @@ function goTone(){tone(1320,.26,.8);if(navigator.vibrate)navigator.vibrate([30,6
 
 function startSession(){
   dayKey=new Date().getDay();
-  PH=buildPhases(dayKey);
+  /* Stamp day one before the phases are built, or the very first session is the
+     one session the on-ramp never applies to. */
+  if(!META.firstDay){META.firstDay=todayISO();put("meta",META);}
+  PH=buildPhases(dayKey,onRamp());
   idx=0;el=0;holding=false;done=false;finishing=false;drift=0;pendingWork=null;tickMark=-1;
   const existing=SESSIONS[todayISO()];
   logged=existing&&!existing.complete?existing.sets.slice():[];
@@ -279,6 +282,7 @@ function startSession(){
 function plannedTotal(){return PH.reduce((a,p)=>a+p.dur,0);}
 function remaining(){let r=Math.max(0,PH[idx].dur-el);for(let i=idx+1;i<PH.length;i++)r+=PH[i].dur;return r;}
 const setLbl=p=>p.sets>1?"Set "+p.set+" of "+p.sets:"Single set";
+const rirLbl=r=>r[0]===r[1]?String(r[0]):r[0]+"–"+r[1];
 function setPips(n,cur){let h="";for(let i=1;i<=n;i++)h+='<i class="'+(i<cur?"done":(i===cur?"cur":""))+'"></i>';$("pips").innerHTML=h;}
 let deltaTimer=null;
 function flashDelta(sec){
@@ -302,7 +306,10 @@ function render(){
   $("exName").textContent=work?m.name:(nextW?sm.name:"Session ends");
   setPips(show.sets,show.set);
   $("setNow").textContent=show.sets>1?"Set "+show.set+" of "+show.sets:"";
-  $("target").innerHTML="<b>"+sm.reps+"</b>"+(sm.side?" "+sm.side:(sm.hold?"":" reps"))+" · <b>"+sm.load+"</b>";
+  $("target").innerHTML="<b>"+show.reps+"</b>"+(sm.side?" "+sm.side:(sm.hold?"":" reps"))+" · <b>"+sm.load+"</b>";
+  $("effort").innerHTML=show.rir
+    ?(onRamp()?"Easy weeks · ":"")+"stop <b>"+rirLbl(show.rir)+"</b> short of failure"
+    :"";
   $("nextLbl").textContent=work
     ?(PH[idx+1]?"Rest "+fmt(PH[idx+1].dur)+(nextW?", then "+M[nextW.m].short+" · "+setLbl(nextW):""):"Last set")
     :(nextW?M[nextW.m].short+" · "+setLbl(nextW):"Session ends");
@@ -319,7 +326,7 @@ function render(){
 function endWork(){
   const p=PH[idx],delta=el-p.dur;
   p.actual=el;drift+=delta;flashDelta(delta);
-  pendingWork={m:p.m,set:p.set,sets:p.sets};
+  pendingWork={m:p.m,set:p.set,sets:p.sets,def:p.def,rir:p.rir};
   idx++;el=0;
   if(idx>=PH.length){finishing=true;openLog();tone(520,.16,.45);return;}
   holding=true;openLog();tone(520,.16,.45);render();
@@ -329,13 +336,24 @@ function endRest(){
   if(idx>=PH.length){finish();return;}
   goTone();render();
 }
+/* Seed the counter with what you did last time, not a static default. Skips
+   today, which is already in SESSIONS as the session writes itself. */
+function lastReps(mKey,set){
+  const prev=setsFor(mKey).filter(r=>r.date!==todayISO())[0];
+  if(!prev)return null;
+  const exact=prev.sets.find(x=>x.set===set);
+  return (exact||prev.sets[prev.sets.length-1]).reps;
+}
 function openLog(){
   const m=M[pendingWork.m];
-  repVal=m.def;
+  repVal=lastReps(pendingWork.m,pendingWork.set)||pendingWork.def||m.def;
   $("repVal").textContent=repVal;
   $("repUnit").textContent=m.hold?"seconds":(m.side?"reps / side":"reps");
   $("logName").textContent=m.name;
   $("logSet").textContent="Set "+pendingWork.set+" of "+pendingWork.sets;
+  $("rirLbl").textContent=pendingWork.rir
+    ?"Reps left in the tank · aim for "+rirLbl(pendingWork.rir)
+    :"Reps left in the tank";
   const pr=prFor(pendingWork.m);
   $("prTag").classList.remove("on");
   const rir=$("rir");rir.innerHTML="";
@@ -343,6 +361,8 @@ function openLog(){
     const b=document.createElement("button");
     b.innerHTML="<b>"+(n===4?"4+":n)+"</b>";
     b.setAttribute("aria-label",n+" reps in reserve");
+    const t=pendingWork.rir;
+    if(t&&n>=t[0]&&n<=t[1])b.classList.add("tgt");
     b.addEventListener("click",()=>commitLog(n));
     rir.appendChild(b);
   }
@@ -401,7 +421,10 @@ async function saveSession(complete,actual){
 }
 function leaveSession(){
   $("sess").classList.remove("on");
-  if(logged.length)saveSession(false);
+  /* `done` means finish() already stored the session complete. Saving again
+     here would overwrite that flag and drop actualSec — which is exactly what
+     the Done button used to do. */
+  if(logged.length&&!done)saveSession(false);
   renderToday();renderHistory();renderStats();
 }
 function loop(now){
@@ -527,6 +550,13 @@ $("expBtn").addEventListener("click",()=>{
   a.href=URL.createObjectURL(new Blob([dump()],{type:"application/json"}));
   a.download="reps-"+todayISO()+".json";a.click();URL.revokeObjectURL(a.href);
 });
+$("pstBtn").addEventListener("click",async()=>{
+  let txt="";
+  try{txt=await navigator.clipboard.readText();}
+  catch(e){toast("Let the app read the clipboard, or use Import");return;}
+  try{await ingest(JSON.parse(txt));toast("Imported");}
+  catch(err){toast("That was not a Reps export");}
+});
 $("cpyBtn").addEventListener("click",async()=>{
   try{await navigator.clipboard.writeText(dump());toast("Copied — paste it anywhere");}
   catch(e){toast("Could not reach the clipboard");}
@@ -541,15 +571,18 @@ $("impBtn").addEventListener("click",()=>$("impFile").click());
 $("impFile").addEventListener("change",async e=>{
   const f=e.target.files[0];if(!f)return;
   try{
-    const d=JSON.parse(await f.text());
-    for(const s of (d.sessions||[]))await put("sessions",s);
-    for(const w of (d.weights||[]))await put("weights",w);
-    if(d.meta){META=Object.assign(META,d.meta,{k:"app"});await put("meta",META);}
-    await load();toast("Imported");
+    await ingest(JSON.parse(await f.text()));toast("Imported");
   }catch(err){toast("Could not read that file");}
   e.target.value="";
 });
 
+async function ingest(d){
+  if(!d||!Array.isArray(d.sessions))throw new Error("not an export");
+  for(const s of d.sessions)await put("sessions",s);
+  for(const w of (d.weights||[]))await put("weights",w);
+  if(d.meta){META=Object.assign(META,d.meta,{k:"app"});await put("meta",META);}
+  await load();
+}
 async function load(){
   const s=await all("sessions");SESSIONS={};s.forEach(x=>SESSIONS[x.date]=x);
   const m=await get("meta","app");if(m)META=Object.assign(META,m);

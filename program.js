@@ -21,29 +21,52 @@ const M = {
   splitsq:  {short:"Split squat",   name:"Split-squat hold",                       reps:"30s",   lo:30, hi:30, side:"each leg", load:"bodyweight",work:70, def:30, hold:true, cue:"Long stride. Drop until your front thigh is level with the floor and your back knee is a few inches off it. A hand on the wall is fine."}
 };
 
-/* The week. 0 = Sunday, matching JS getDay(). */
+/* How hard, in reps left in the tank at the end of a set. Reps alone say how
+   much work; without this the first session ran every last set to failure on
+   the day that was designed to be the easy one. Lower is harder. A day sets
+   the tone, a block can override it, and the on-ramp overrides both. */
+const DEFAULT_RIR = [1,2], ONRAMP_RIR = [3,4];
+
+/* The week. 0 = Sunday, matching JS getDay(). A block may carry `reps`/`lo`/`hi`
+   to override the movement's own range when the same movement is asked to do a
+   different job on a different day. */
 const WEEK = {
-  1: {name:"Press A",   blocks:[{m:"press",sets:3,rest:90},{m:"lateral",sets:3,rest:45},{m:"reardelt",sets:2,rest:40}]},
-  2: {name:"Arms",      blocks:[{m:"curl",sets:4,rest:60},{m:"ohext",sets:3,rest:60},{m:"reardelt",sets:2,rest:40}]},
-  3: {name:"Chest",     blocks:[{m:"pushup",sets:4,rest:75},{m:"lateral",sets:3,rest:45},{m:"swing",sets:1,rest:0}]},
-  4: {name:"Delts only",blocks:[{m:"lateral",sets:4,rest:45},{m:"reardelt",sets:3,rest:40}]},
-  5: {name:"Press B",   blocks:[{m:"press",sets:3,rest:90},{m:"curl",sets:3,rest:60},{m:"ohext",sets:2,rest:60}]},
+  1: {name:"Press A",   rir:[2,2], blocks:[{m:"press",sets:3,rest:90},{m:"lateral",sets:3,rest:45},{m:"reardelt",sets:2,rest:40}]},
+  2: {name:"Arms",      rir:[1,2], blocks:[{m:"curl",sets:4,rest:60},{m:"ohext",sets:3,rest:60},{m:"reardelt",sets:2,rest:40}]},
+  3: {name:"Chest",     rir:[1,2], blocks:[{m:"pushup",sets:4,rest:75},{m:"lateral",sets:3,rest:45},{m:"swing",sets:1,rest:0,rir:[3,4]}]},
+  4: {name:"Delts only",rir:[1,2], blocks:[{m:"lateral",sets:4,rest:45},{m:"reardelt",sets:3,rest:40}]},
+  5: {name:"Press B",   rir:[2,2], blocks:[{m:"press",sets:3,rest:90},{m:"curl",sets:3,rest:60},{m:"ohext",sets:2,rest:60}]},
   6: {name:"Tendon"                 , blocks:[{m:"doorpress",sets:3,rest:60},{m:"splitsq",sets:3,rest:45}]},
-  0: {name:"Chest & arms", blocks:[{m:"pushup",sets:4,rest:60},{m:"curl",sets:3,rest:50},{m:"ohext",sets:2,rest:50},{m:"swing",sets:1,rest:0}]}
+  /* Sunday is the easy day. Flatter rep targets than the hard days use, so the
+     fourth set looks like the first instead of collapsing into it. */
+  0: {name:"Chest & arms", rir:[2,3], blocks:[
+       {m:"pushup",sets:4,rest:60,reps:"10–12",lo:10,hi:12},
+       {m:"curl",sets:3,rest:50},
+       {m:"ohext",sets:2,rest:50,reps:"8–10",lo:8,hi:10},
+       {m:"swing",sets:1,rest:0,rir:[3,4]}]}
 };
 
 /* Weeks 1–2 hold you back on purpose: 3–4 reps in reserve, no vest, no progression. */
 const ONRAMP_DAYS = 14;
 
-function buildPhases(dayKey){
+function buildPhases(dayKey, onramp){
   const day = WEEK[dayKey], ph = [];
   day.blocks.forEach((b, bi) => {
+    const m = M[b.m];
+    const spec = {
+      reps: b.reps || m.reps, lo: b.lo || m.lo, hi: b.hi || m.hi,
+      rir: m.hold ? null : (onramp ? ONRAMP_RIR : (b.rir || day.rir || DEFAULT_RIR))
+    };
+    spec.def = (b.reps ? Math.round((spec.lo + spec.hi)/2) : m.def);
     for(let s=1; s<=b.sets; s++){
-      ph.push({type:"work", m:b.m, bi, set:s, sets:b.sets, dur:M[b.m].work});
+      ph.push(Object.assign({type:"work", m:b.m, bi, set:s, sets:b.sets, dur:m.work}, spec));
       const isLast = (bi === day.blocks.length-1) && (s === b.sets);
-      if(!isLast && b.rest > 0) ph.push({type:"rest", m:b.m, bi, set:s, sets:b.sets, dur:b.rest});
-      else if(!isLast) ph.push({type:"rest", m:b.m, bi, set:s, sets:b.sets, dur:20});
+      const rest = (!isLast && b.rest > 0) ? b.rest : 20;
+      if(!isLast) ph.push(Object.assign({type:"rest", m:b.m, bi, set:s, sets:b.sets, dur:rest}, spec));
     }
   });
   return ph;
 }
+
+/* What the plan lists read, so a block override never disagrees with the timer. */
+const blockReps = b => b.reps || M[b.m].reps;
