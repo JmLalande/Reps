@@ -197,6 +197,26 @@ details.cue b{color:var(--pale);font-weight:500}
 .rir button:active{background:var(--pale);color:#0A0B0C;transform:scale(.97)}
 .rir button.tgt{border-color:rgba(255,255,255,.42);background:rgba(255,255,255,.07)}
 .rir b{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+#logOne{flex:1;min-height:0;display:flex;flex-direction:column}
+
+/* one side at a time */
+#logTwo{flex-direction:column;margin:auto 0 0}
+.side{margin-top:18px}
+.side .h{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--faint);font-weight:500;margin-bottom:9px}
+.side .cnt{display:flex;gap:10px;height:74px}
+.side .cnt button{flex:0 0 74px;border-radius:18px;background:var(--panel);border:1px solid var(--line);
+  display:grid;place-items:center;font-size:34px;color:var(--pale);font-weight:300;
+  transition:background .2s ease}
+.side .cnt button:active{background:var(--panel2)}
+.side .cnt .v{flex:1;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);
+  border-radius:18px;font-size:40px;font-weight:700;letter-spacing:-.04em}
+.side .rir{margin-top:9px}
+.side .rir button{height:56px;border-radius:15px}
+.side .rir b{font-size:19px}
+.side .rir button.on{background:var(--pale);border-color:var(--pale);color:#0A0B0C}
+#sideSave{margin-top:20px}
+#sideSave:disabled{opacity:.38}
 
 /* done */
 .doneview{position:absolute;inset:0;z-index:7;background:#08090A;display:none;flex-direction:column;
@@ -303,13 +323,16 @@ details.cue b{color:var(--pale);font-weight:500}
       <h2 id="logName"></h2>
       <div class="setline" id="logSet"></div>
       <div class="prtag" id="prTag">Personal record</div>
-      <div class="repbox">
-        <button class="pad" id="repMinus" aria-label="One fewer">−</button>
-        <div class="mid"><b class="mono" id="repVal">0</b><span id="repUnit">reps</span></div>
-        <button class="pad" id="repPlus" aria-label="One more">+</button>
+      <div id="logOne">
+        <div class="repbox">
+          <button class="pad" id="repMinus" aria-label="One fewer">−</button>
+          <div class="mid"><b class="mono" id="repVal">0</b><span id="repUnit">reps</span></div>
+          <button class="pad" id="repPlus" aria-label="One more">+</button>
+        </div>
+        <div class="rirlbl" id="rirLbl">Reps left in the tank</div>
+        <div class="rir" id="rir"></div>
       </div>
-      <div class="rirlbl" id="rirLbl">Reps left in the tank</div>
-      <div class="rir" id="rir"></div>
+      <div id="logTwo" style="display:none"></div>
     </div>
 
     <div class="doneview" id="doneview">
@@ -400,7 +423,7 @@ details.cue b{color:var(--pale);font-weight:500}
     <div class="card"><h3>Sound</h3>
       <p class="muted">Cue volume. Test it with your music on, at the volume you train at.</p>
       <div class="row" style="margin-top:14px;align-items:center;gap:14px">
-        <input type="range" id="volIn" min="0" max="200" step="10" value="100" style="flex:1">
+        <input type="range" id="volIn" min="20" max="200" step="10" value="100" style="flex:1">
         <button class="go small" id="volTest" style="width:auto;margin:0;padding:11px 18px">Test</button></div>
       <div class="muted mono" id="volNote" style="margin-top:8px">100%</div>
       <button class="go small" id="sndToggle" style="width:100%;margin-top:14px">Cues on</button></div>
@@ -415,6 +438,8 @@ details.cue b{color:var(--pale);font-weight:500}
         <textarea id="pasteIn" rows="4" placeholder="Paste an export here"></textarea>
         <button class="go small" id="pasteGo" style="width:100%;margin-top:10px">Load it</button></div>
       <input type="file" id="impFile" accept="application/json" style="display:none"></div>
+    <div class="card"><h3>Screen</h3>
+      <p class="muted">The screen is held awake while a session runs. If your phone locks anyway, the clock keeps counting real time. Reopen the app and it is where the session should be, not where you left it.</p></div>
     <div class="card"><h3>Version</h3>
       <p class="muted">To pick up a new version, swipe the app away from your recent apps and open it again.</p>
       <div class="muted mono" id="verNote" style="margin-top:10px"></div></div>

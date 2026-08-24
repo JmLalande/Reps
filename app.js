@@ -26,8 +26,11 @@ const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%6
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v11";
+const APP_VERSION="v12";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
+/* A movement done one side at a time writes a row per side, so a row is not a
+   set. Everything that counts sets out loud counts them this way. */
+const setCount=a=>new Set((a||[]).map(x=>x.m+"#"+x.set)).size;
 function computeStreak(){
   let n=0,d=new Date();
   if(!qualifies(SESSIONS[iso(d)]))d.setDate(d.getDate()-1);
@@ -103,7 +106,8 @@ function renderToday(){
   const done=SESSIONS[todayISO()];
   $("startBtn").textContent=done?(done.complete?"Start again":"Resume"):"Start session";
   const ec=$("editToday");
-  if(qualifies(done)){ec.style.display="block";ec.textContent="Edit today, "+done.sets.length+(done.sets.length===1?" set":" sets");}
+  if(qualifies(done)){const n=setCount(done.sets);
+    ec.style.display="block";ec.textContent="Edit today, "+n+(n===1?" set":" sets");}
   else ec.style.display="none";
 
   $("planList").innerHTML=day.blocks.map((b,i)=>{
@@ -151,9 +155,10 @@ function renderHistory(){
   $("recent").innerHTML=list.length?list.map(s=>{
     const dt=new Date(s.date+"T12:00:00");
     const t=s.startedAt?new Date(s.startedAt).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}):"";
+    const n=setCount(s.sets);
     return "<div class='stat' data-edit='"+s.date+"' style='cursor:pointer'><span>"+
       dt.toLocaleDateString(undefined,{month:"short",day:"numeric"})+
-      " · "+WEEK[s.dayKey].name+"<br><span class='muted'>"+(s.sets||[]).length+((s.sets||[]).length===1?" set · ":" sets · ")+t+"</span></span>"+
+      " · "+WEEK[s.dayKey].name+"<br><span class='muted'>"+n+(n===1?" set · ":" sets · ")+t+"</span></span>"+
       "<span class='v mono'>"+(s.actualSec?fmt(s.actualSec):"")+"</span></div>";
   }).join(""):"<p class='muted'>Nothing yet.</p>";
   document.querySelectorAll("[data-edit]").forEach(el=>{
@@ -215,7 +220,7 @@ function renderStats(){
 
 /* ---------------------------------------------------------------- session */
 let PH=[],idx=0,el=0,holding=false,done=false,dayKey=1,startedAt=0,drift=0,pendingWork=null;
-let logged=[],repVal=0,sound=true,finishing=false,raf=null,tickMark=-1;
+let logged=[],repVal=0,sound=true,finishing=false,raf=null,cued=0,anchor=0;
 const THEME={work:{bg:"#33150A",ink:"#FFE9DA",mut:"#C79173",acc:"#FF8A4C"},
              rest:{bg:"#072421",ink:"#DEF6F0",mut:"#78AFA5",acc:"#54DFC3"}};
 const appEl=$("app"),ring=$("ring"),track=ring.querySelector(".track"),bar=ring.querySelector(".bar");
@@ -259,17 +264,34 @@ function tone(f,d,g,type){
     o.start(t);o.stop(t+dur+.02);
   }catch(e){}
 }
-/* the ramp: three soft ticks, then one bright tone. never an alarm. */
-function tick(n){tone(880,.085,.5);if(navigator.vibrate)navigator.vibrate(14);}
+/* The ramp: three soft ticks, then one bright tone. Never an alarm. Spread
+   across five seconds instead of three. Three was not more information than
+   five, it was the same information delivered too fast to act on. */
+const CUE_AT=[5,3,1];
+function tick(){tone(880,.085,.5);if(navigator.vibrate)navigator.vibrate(14);}
 function goTone(){tone(1320,.22,.77);if(navigator.vibrate)navigator.vibrate([26,50,26]);}
 
+/* Hold the screen awake while a session runs. Android takes the lock back on
+   its own whenever the app leaves the foreground, so it is asked for again
+   every time the app returns. */
+let wake=null;
+async function keepAwake(){
+  if(!("wakeLock" in navigator)||wake)return;
+  try{wake=await navigator.wakeLock.request("screen");
+    wake.addEventListener("release",()=>{wake=null;});}catch(e){}
+}
+function dropAwake(){try{wake&&wake.release();}catch(e){}wake=null;}
+addEventListener("visibilitychange",()=>{
+  if(!document.hidden&&$("sess").classList.contains("on")&&!done)keepAwake();
+});
 function startSession(){
   dayKey=new Date().getDay();
   /* Stamp day one before the phases are built, or the very first session is the
      one session the on-ramp never applies to. */
   if(!META.firstDay){META.firstDay=todayISO();put("meta",META);}
   PH=buildPhases(dayKey,onRamp());
-  idx=0;el=0;holding=false;done=false;finishing=false;drift=0;pendingWork=null;tickMark=-1;
+  idx=0;el=0;holding=false;done=false;finishing=false;drift=0;pendingWork=null;cued=0;
+  anchor=Date.now();
   const existing=SESSIONS[todayISO()];
   logged=existing&&!existing.complete?existing.sets.slice():[];
   startedAt=existing&&existing.startedAt?existing.startedAt:Date.now();
@@ -277,7 +299,7 @@ function startSession(){
   $("doneview").classList.remove("on");
   $("log").classList.remove("on");
   $("sess").classList.add("on");
-  sizeRing();render();
+  sizeRing();render();keepAwake();
   if(!raf)raf=requestAnimationFrame(loop);
 }
 function plannedTotal(){return PH.reduce((a,p)=>a+p.dur,0);}
@@ -328,48 +350,108 @@ function endWork(){
   const p=PH[idx],delta=el-p.dur;
   p.actual=el;drift+=delta;flashDelta(delta);
   pendingWork={m:p.m,set:p.set,sets:p.sets,def:p.def,rir:p.rir};
-  idx++;el=0;
+  idx++;el=0;anchor=Date.now();
   if(idx>=PH.length){finishing=true;openLog();tone(520,.14,.66);return;}
   holding=true;openLog();tone(520,.14,.66);render();
 }
 function endRest(){
-  const p=PH[idx];p.actual=el;drift+=(el-p.dur);idx++;el=0;tickMark=-1;
+  const p=PH[idx];p.actual=el;drift+=(el-p.dur);
+  /* Whatever the rest ran over belongs to the set after it. Without the carry,
+     a phone that slept through the end of a rest would wake up and hand back a
+     whole fresh rest that has already been taken. */
+  const carry=Math.max(0,el-p.dur);
+  idx++;el=0;cued=0;anchor=Date.now()-carry*1000;
   if(idx>=PH.length){finish();return;}
   goTone();render();
 }
 /* Seed the counter with what you did last time, not a static default. Skips
    today, which is already in SESSIONS as the session writes itself. */
-function lastReps(mKey,set){
+function lastReps(mKey,set,side){
   const prev=setsFor(mKey).filter(r=>r.date!==todayISO())[0];
   if(!prev)return null;
-  const exact=prev.sets.find(x=>x.set===set);
-  return (exact||prev.sets[prev.sets.length-1]).reps;
+  const mine=side?prev.sets.filter(x=>x.side===side):prev.sets;
+  const pool=mine.length?mine:prev.sets;
+  const exact=pool.find(x=>x.set===set);
+  return (exact||pool[pool.length-1]).reps;
 }
-function openLog(){
-  const m=M[pendingWork.m];
-  repVal=lastReps(pendingWork.m,pendingWork.set)||pendingWork.def||m.def;
-  $("repVal").textContent=repVal;
-  $("repUnit").textContent=m.hold?"seconds":(m.side?"reps / side":"reps");
-  $("logName").textContent=m.name;
-  $("logSet").textContent="Set "+pendingWork.set+" of "+pendingWork.sets;
-  $("rirLbl").textContent=pendingWork.rir
-    ?"Reps left in the tank · aim for "+rirLbl(pendingWork.rir)
-    :"Reps left in the tank";
-  const pr=prFor(pendingWork.m);
-  $("prTag").classList.remove("on");
-  const rir=$("rir");rir.innerHTML="";
+/* A movement done one side at a time gets one number per side. Your arms are
+   not the same arm: the first press session logged 6, 4 and 4 across three sets
+   on each side, and nothing in the log could say which side gave out. */
+const SIDES=[{k:"R",lbl:"Right"},{k:"L",lbl:"Left"}];
+let sideVal=null;
+function fillRir(host,target,onPick){
+  host.innerHTML="";
   for(let n=0;n<=4;n++){
     const b=document.createElement("button");
     b.innerHTML="<b>"+(n===4?"4+":n)+"</b>";
     b.setAttribute("aria-label",n+" reps in reserve");
-    const t=pendingWork.rir;
-    if(t&&n>=t[0]&&n<=t[1])b.classList.add("tgt");
-    b.addEventListener("click",()=>commitLog(n));
-    rir.appendChild(b);
+    if(target&&n>=target[0]&&n<=target[1])b.classList.add("tgt");
+    b.addEventListener("click",()=>onPick(n));
+    host.appendChild(b);
   }
-  $("prCheck")&&0;
+}
+function openLog(){
+  const m=M[pendingWork.m], per=!!m.side;
+  $("logName").textContent=m.name;
+  $("logSet").textContent="Set "+pendingWork.set+" of "+pendingWork.sets;
+  $("prTag").classList.remove("on");
+  $("logOne").style.display=per?"none":"flex";
+  $("logTwo").style.display=per?"flex":"none";
+  if(per)openSides(m);else openSingle(m);
   $("log").classList.add("on");$("log").setAttribute("aria-hidden","false");
-  updatePrTag(pr);
+}
+function openSingle(m){
+  repVal=lastReps(pendingWork.m,pendingWork.set)||pendingWork.def||m.def;
+  $("repVal").textContent=repVal;
+  $("repUnit").textContent=m.hold?"seconds":"reps";
+  $("rirLbl").textContent=pendingWork.rir
+    ?"Reps left in the tank · aim for "+rirLbl(pendingWork.rir)
+    :"Reps left in the tank";
+  fillRir($("rir"),pendingWork.rir,commitLog);
+  updatePrTag(prFor(pendingWork.m));
+}
+function openSides(m){
+  const unit=m.hold?"seconds":"reps", cap=m.hold?600:60, host=$("logTwo");
+  sideVal={};host.innerHTML="";
+  const lbl=document.createElement("div");
+  lbl.className="rirlbl";lbl.style.marginTop="0";
+  lbl.textContent=pendingWork.rir
+    ?"One side at a time · aim for "+rirLbl(pendingWork.rir)+" left in the tank"
+    :"One side at a time";
+  host.appendChild(lbl);
+  SIDES.forEach(sd=>{
+    const cell={reps:lastReps(pendingWork.m,pendingWork.set,sd.k)||pendingWork.def||m.def,rir:null};
+    sideVal[sd.k]=cell;
+    const wrap=document.createElement("div");wrap.className="side";
+    wrap.innerHTML="<div class='h'><span>"+sd.lbl+"</span><span>"+unit+"</span></div>"+
+      "<div class='cnt'><button aria-label='One fewer'>−</button>"+
+      "<div class='v mono'>"+cell.reps+"</div>"+
+      "<button aria-label='One more'>+</button></div><div class='rir'></div>";
+    const pads=wrap.querySelectorAll(".cnt button"), v=wrap.querySelector(".v");
+    const bump=d=>{cell.reps=Math.max(0,Math.min(cap,cell.reps+d));v.textContent=cell.reps;sidePr();};
+    pads[0].addEventListener("click",()=>bump(-1));
+    pads[1].addEventListener("click",()=>bump(1));
+    const row=wrap.querySelector(".rir");
+    fillRir(row,pendingWork.rir,n=>{
+      cell.rir=n;
+      Array.prototype.forEach.call(row.children,(b,i)=>b.classList.toggle("on",i===n));
+      sideReady();
+    });
+    host.appendChild(wrap);
+  });
+  const save=document.createElement("button");
+  save.className="go";save.id="sideSave";save.disabled=true;save.textContent="Pick both";
+  save.addEventListener("click",commitSides);
+  host.appendChild(save);
+  sidePr();
+}
+function sideReady(){
+  const ok=SIDES.every(sd=>sideVal[sd.k].rir!==null), b=$("sideSave");
+  b.disabled=!ok;b.textContent=ok?"Save the set":"Pick both";
+}
+function sidePr(){
+  const pr=prFor(pendingWork.m);
+  $("prTag").classList.toggle("on",!!(pr&&SIDES.some(sd=>sideVal[sd.k].reps>pr.reps)));
 }
 function updatePrTag(pr){
   const on=pr&&repVal>pr.reps;
@@ -381,10 +463,20 @@ function bumpRep(delta){
   $("repVal").textContent=repVal;
   updatePrTag(prFor(pendingWork.m));
 }
+function commitSides(){
+  const pr=prFor(pendingWork.m), ts=Date.now();
+  const isPr=!!(pr&&SIDES.some(sd=>sideVal[sd.k].reps>pr.reps));
+  SIDES.forEach(sd=>logged.push({m:pendingWork.m,set:pendingWork.set,side:sd.k,
+    reps:sideVal[sd.k].reps,rir:sideVal[sd.k].rir,ts:ts}));
+  closeLog(isPr);
+}
 function commitLog(rir){
-  const pr=prFor(pendingWork.m), isPr=pr&&repVal>pr.reps;
+  const pr=prFor(pendingWork.m), isPr=!!(pr&&repVal>pr.reps);
   logged.push({m:pendingWork.m,set:pendingWork.set,reps:repVal,rir:rir,ts:Date.now()});
-  holding=false;pendingWork=null;
+  closeLog(isPr);
+}
+function closeLog(isPr){
+  holding=false;pendingWork=null;sideVal=null;
   $("log").classList.remove("on");$("log").setAttribute("aria-hidden","true");
   tone(isPr?990:880,.12,.66);
   saveSession(false);
@@ -399,7 +491,8 @@ function finish(){
   saveSession(true,actual);
   const streak=computeStreak();
   $("sStreak").textContent=streak;
-  $("doneNote").textContent=logged.length+(logged.length===1?" set logged. ":" sets logged. ")+
+  const n=setCount(logged);
+  $("doneNote").textContent=n+(n===1?" set logged. ":" sets logged. ")+
     (streak>0?("Day "+streak+" in a row."):"");
   const ms=streak>0?milestoneFor(streak,META.poolSeen):null;
   $("doneMs").textContent=ms?ms.text:"";
@@ -422,27 +515,31 @@ async function saveSession(complete,actual){
 }
 function leaveSession(){
   $("sess").classList.remove("on");
+  dropAwake();
   /* `done` means finish() already stored the session complete. Saving again
      here would overwrite that flag and drop actualSec. That is exactly what
      the Done button used to do. */
   if(logged.length&&!done)saveSession(false);
   renderToday();renderHistory();renderStats();
 }
-function loop(now){
-  if(!loop.last)loop.last=now;
-  const dt=(now-loop.last)/1000;loop.last=now;
+/* The clock reads the wall, not the frame counter. A phone that sleeps stops
+   painting frames, so a frame-counted clock resumed exactly where it froze and
+   the whole session slid by however long the screen was off. */
+function loop(){
   if($("sess").classList.contains("on")&&!done&&!finishing){
     const p=PH[idx];
-    if(p.type==="rest"&&holding){el=Math.min(el+dt,p.dur);}else{el+=dt;}
-    if(p.type==="rest"&&!holding&&el>=p.dur){endRest();}
-    else{
-      if(p.type==="rest"&&!holding){
-        const lft=Math.ceil(p.dur-el);
-        if(lft<=3&&lft>0&&lft!==tickMark){tickMark=lft;tick(lft);}
-        if(lft>3)tickMark=-1;
-      }
-      render();
+    el=(Date.now()-anchor)/1000;
+    if(p.type==="rest"&&holding){
+      el=Math.min(el,p.dur);
+    }else if(p.type==="rest"&&el>=p.dur){
+      endRest();raf=requestAnimationFrame(loop);return;
+    }else if(p.type==="rest"){
+      const lft=p.dur-el;
+      /* A tick already well past its moment is one the phone slept through.
+         Skip it, rather than fire the whole ramp at once on waking. */
+      while(cued<CUE_AT.length&&lft<=CUE_AT[cued]){const k=CUE_AT[cued++];if(lft>k-.7)tick();}
     }
+    render();
   }
   raf=requestAnimationFrame(loop);
 }
@@ -464,10 +561,11 @@ function renderEdList(){
   const s=SESSIONS[edDate];
   if(!s.sets.length){$("edList").innerHTML="<p class='muted'>No sets left on this day.</p>";return;}
   let h="<div class='edlab'><span>Reps</span><span>RIR</span></div>";
-  const tally={};s.sets.forEach(x=>tally[x.m]=(tally[x.m]||0)+1);
+  const tally={};s.sets.forEach(x=>{(tally[x.m]=tally[x.m]||new Set()).add(x.set);});
   h+=s.sets.map((x,i)=>{
-    const m=M[x.m],n=tally[x.m];
-    return "<div class='edrow'><span class='who'>"+m.name+"<small>Set "+x.set+(n>1?" of "+n:"")+"</small></span>"+
+    const m=M[x.m],n=tally[x.m].size;
+    const sd=x.side==="L"?" · Left":(x.side==="R"?" · Right":"");
+    return "<div class='edrow'><span class='who'>"+m.name+"<small>Set "+x.set+(n>1?" of "+n:"")+sd+"</small></span>"+
       "<input type='number' inputmode='numeric' value='"+x.reps+"' data-i='"+i+"' data-f='reps'>"+
       "<select data-i='"+i+"' data-f='rir'>"+[0,1,2,3,4].map(n=>
         "<option value='"+n+"'"+(x.rir===n?" selected":"")+">"+(n===4?"4+":n)+"</option>").join("")+"</select>"+
@@ -498,9 +596,10 @@ async function persistEdit(){
   renderToday();renderHistory();renderStats();
 }
 $("edAdd").addEventListener("click",async()=>{
-  const s=SESSIONS[edDate], mk=$("edMove").value;
-  const n=s.sets.filter(x=>x.m===mk).length+1;
-  s.sets.push({m:mk,set:n,reps:M[mk].def,rir:2,ts:Date.now()});
+  const s=SESSIONS[edDate], mk=$("edMove").value, m=M[mk], ts=Date.now();
+  const n=new Set(s.sets.filter(x=>x.m===mk).map(x=>x.set)).size+1;
+  if(m.side)SIDES.forEach(sd=>s.sets.push({m:mk,set:n,side:sd.k,reps:m.def,rir:2,ts:ts}));
+  else s.sets.push({m:mk,set:n,reps:m.def,rir:2,ts:ts});
   await persistEdit(); renderEdList();
 });
 $("edDel").addEventListener("click",async()=>{
@@ -582,7 +681,7 @@ $("volIn").addEventListener("input",e=>{
 $("volIn").addEventListener("change",async e=>{
   META.vol=(+e.target.value)/100;await put("meta",META);tone(880,.085,.6);});
 $("volTest").addEventListener("click",()=>{
-  tick(3);setTimeout(()=>tick(2),800);setTimeout(()=>tick(1),1600);setTimeout(goTone,2400);});
+  tick();setTimeout(tick,2000);setTimeout(tick,4000);setTimeout(goTone,5000);});
 $("impBtn").addEventListener("click",()=>$("impFile").click());
 $("impFile").addEventListener("change",async e=>{
   const f=e.target.files[0];if(!f)return;
@@ -605,7 +704,9 @@ async function load(){
   sound=META.sound!==false;
   $("sndBtn").setAttribute("aria-pressed",sound?"true":"false");
   $("sndToggle").textContent=sound?"Cues on":"Cues off";
-  VOL=typeof META.vol==="number"?META.vol:1;
+  /* A slider parked at zero is an app with no cues and nothing on screen to say
+     why. The slider stops at 20%, and a stored zero reads as never set. */
+  VOL=(typeof META.vol==="number"&&META.vol>=.2)?META.vol:1;
   $("volIn").value=Math.round(VOL*100);$("volNote").textContent=Math.round(VOL*100)+"%";
   WEIGHTS=await all("weights");
   $("verNote").textContent=APP_VERSION;
