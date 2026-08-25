@@ -29,13 +29,13 @@ td.bad{color:#FF8B6B}td.ok{color:#63D19E}
 </style></head><body>
 
 <h1>Countdown test</h1>
-<p class="sub">This page is not the app. The app is untouched. Play both, tell me which one sounds right.</p>
+<p class="sub">Not the app. The app still has the old one. Nothing ships until you say so.</p>
 
 <h2>Listen</h2>
-<button class="big" id="a">A &middot; what the app does now
-  <small>Each beep is fired the moment the clock reaches it.</small></button>
-<button class="big fix" id="b">B &middot; the fix
-  <small>All six are handed to the sound card at once, one second apart.</small></button>
+<button class="big fix" id="new">The proposal
+  <small>One second of quiet, then four beeps and the tone. Five sounds, five seconds.</small></button>
+<button class="big" id="old">What the app has now
+  <small>Five beeps and the tone, and the first beep half swallowed.</small></button>
 
 <div class="dots" id="dots"></div>
 
@@ -51,23 +51,24 @@ td.bad{color:#FF8B6B}td.ok{color:#63D19E}
 
 <script>
 var VOL=1, actx=null, lim=null, dotEls=[];
-var CUE_AT=[5,4,3,2,1];
 
-for(var i=0;i<6;i++){var d=document.createElement("i");if(i===5)d.className="go";
-  document.getElementById("dots").appendChild(d);dotEls.push(d);}
-
-function audio(){
+function audio(warm){
   if(!actx){
     actx=new (window.AudioContext||window.webkitAudioContext)();
     lim=actx.createDynamicsCompressor();
     lim.threshold.value=-6;lim.knee.value=0;lim.ratio.value=20;
     lim.attack.value=.002;lim.release.value=.12;
     lim.connect(actx.destination);
+    /* A note nobody hears, so the device is already running by the time one
+       matters. Without it the very first sound of a session is the one the
+       speaker eats while it wakes up. */
+    if(warm){var o=actx.createOscillator(),g=actx.createGain();
+      g.gain.value=0;o.connect(g);g.connect(actx.destination);
+      o.start();o.stop(actx.currentTime+.25);}
   }
   if(actx.state==="suspended")actx.resume();
   return actx;
 }
-/* Exactly the tone function that is in the app today. */
 function tone(f,d,g,type){
   try{
     var a=audio(),t=a.currentTime,dur=d||.1;
@@ -80,67 +81,55 @@ function tone(f,d,g,type){
     return t;
   }catch(e){return null;}
 }
-/* Same note, but placed at a time you choose instead of right now. */
-function toneAt(a,at,f,d,g){
-  var dur=d||.1;
-  var o=a.createOscillator(),v=a.createGain();
-  o.type="sine";o.frequency.value=f;
-  v.gain.value=0;o.connect(v);v.connect(lim);
-  v.gain.linearRampToValueAtTime(Math.max(.0002,(g||.5)*VOL),at+.012);
-  v.gain.exponentialRampToValueAtTime(.0001,at+dur);
-  o.start(at);o.stop(at+dur+.02);
-  return at;
-}
+function tick(){return tone(880,.075,.5);}
+function goTone(){return tone(1320,.22,.77);}
 
-function reset(){
+function dots(n){
+  var host=document.getElementById("dots");host.innerHTML="";dotEls=[];
+  for(var i=0;i<n;i++){var d=document.createElement("i");if(i===n-1)d.className="go";
+    host.appendChild(d);dotEls.push(d);}
+}
+function flash(i){if(!dotEls[i])return;dotEls[i].classList.add("lit");
+  setTimeout(function(){dotEls[i].classList.remove("lit");},170);}
+function reset(n){
   if(document.getElementById("cold").checked&&actx){try{actx.close();}catch(e){}actx=null;lim=null;}
-  dotEls.forEach(function(d){d.classList.remove("lit");});
+  dots(n);
   document.getElementById("out").innerHTML='<tr><td colspan="2" style="color:#6E7479">Playing…</td></tr>';
   document.getElementById("verdict").textContent="";
 }
-function flash(i){dotEls[i].classList.add("lit");setTimeout(function(){dotEls[i].classList.remove("lit");},170);}
-
 function report(times){
   var rows="",worst=0;
   for(var i=1;i<times.length;i++){
-    var gap=times[i]-times[i-1];
-    var off=Math.abs(gap-1);if(off>worst)worst=off;
-    rows+="<tr><td>beep "+i+" to beep "+(i+1)+"</td><td class='"+(off>.05?"bad":"ok")+"'>"
+    var gap=times[i]-times[i-1],off=Math.abs(gap-1);
+    if(off>worst)worst=off;
+    rows+="<tr><td>sound "+i+" to sound "+(i+1)+"</td><td class='"+(off>.05?"bad":"ok")+"'>"
       +gap.toFixed(3)+" s</td></tr>";
   }
   document.getElementById("out").innerHTML=rows;
   document.getElementById("verdict").textContent = worst>.05
-    ? "Off by "+Math.round(worst*1000)+" ms at the worst gap. That is the one you can hear."
-    : "Every gap is one second. Nothing to hear.";
+    ? "Off by "+Math.round(worst*1000)+" ms at the worst gap."
+    : "Every gap is one second.";
 }
 
-/* A: the app as it is. A wall clock drives a frame loop and each beep is fired
-   when its moment arrives, into a sound device that was opened a heartbeat ago. */
-document.getElementById("a").onclick=function(){
-  reset();
-  var start=Date.now(),cued=0,times=[],a=audio();
+/* The clock runs, each sound is fired the moment its mark passes. Same engine in
+   both, the only difference is which marks are on the list. */
+function play(marks){
+  reset(marks.length+1);
+  var start=Date.now(),cued=0,times=[],a=audio(true);
   (function frame(){
     var left=5-(Date.now()-start)/1000;
-    while(cued<CUE_AT.length&&left<=CUE_AT[cued]){
-      var k=CUE_AT[cued++];
-      if(left>k-.6){times.push(tone(880,.075,.5));flash(5-k);}
+    while(cued<marks.length&&left<=marks[cued]){
+      var k=marks[cued++];
+      if(left>k-.6){times.push(tick());flash(cued-1);}
     }
-    if(left<=0){times.push(tone(1320,.22,.77));flash(5);report(times);return;}
+    if(left<=0){times.push(goTone());flash(marks.length);report(times);return;}
     requestAnimationFrame(frame);
   })();
-};
-
-/* B: read the sound card's clock once, then place all six notes on it. Whatever
-   the device does with its own start up, the six move together. */
-document.getElementById("b").onclick=function(){
-  reset();
-  var a=audio(),t0=a.currentTime+.06,times=[];
-  for(var i=0;i<5;i++)times.push(toneAt(a,t0+i,880,.075,.5));
-  times.push(toneAt(a,t0+5,1320,.22,.77));
-  for(var j=0;j<6;j++)(function(j){setTimeout(function(){flash(j);},(t0-a.currentTime+j)*1000);})(j);
-  setTimeout(function(){report(times);},(t0-a.currentTime+5.1)*1000);
-};
+}
+document.getElementById("new").onclick=function(){play([4,3,2,1]);};
+document.getElementById("old").onclick=function(){play([5,4,3,2,1]);};
 
 document.getElementById("vol").oninput=function(e){
   VOL=(+e.target.value)/100;document.getElementById("volN").textContent=e.target.value+"%";};
+dots(5);
 </script></body></html>
