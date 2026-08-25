@@ -26,7 +26,7 @@ const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%6
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v17";
+const APP_VERSION="v18";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -250,6 +250,10 @@ function audio(){
     lim.connect(actx.destination);
   }
   if(actx.state==="suspended")actx.resume();
+  /* Anything that opens the audio device gets the primer, not just a session.
+     The settings test used to skip it and fire its first beep into a speaker
+     that had not woken up yet, which is precisely the case it exists to check. */
+  if(!prime&&sound)startPrime();
   return actx;
 }
 function tone(f,d,g,type){
@@ -280,11 +284,11 @@ function tick(){tone(880,.075,.5);if(navigator.vibrate)navigator.vibrate(14);}
    does not hold the stage open, which is why a muted warm up note did nothing. */
 let prime=null;
 function startPrime(){
-  if(prime||!sound)return;
+  if(prime||!actx)return;
   try{
-    const a=audio(),o=a.createOscillator(),g=a.createGain();
+    const o=actx.createOscillator(),g=actx.createGain();
     o.type="sine";o.frequency.value=30;g.gain.value=.012;
-    o.connect(g);g.connect(a.destination);o.start();
+    o.connect(g);g.connect(actx.destination);o.start();
     prime=o;
   }catch(e){}
 }
@@ -310,7 +314,7 @@ addEventListener("visibilitychange",()=>{
    browser lets us open the audio device, since it runs inside the tap. */
 const LEAD=5;
 function startSession(){
-  if(sound){try{audio();startPrime();}catch(e){}}
+  if(sound){try{audio();}catch(e){}}
   dayKey=new Date().getDay();
   /* Stamp day one before the phases are built, or the very first session is the
      one session the on-ramp never applies to. */
@@ -544,7 +548,7 @@ async function saveSession(complete,actual){
 }
 function leaveSession(){
   $("sess").classList.remove("on");
-  dropAwake();stopPrime();
+  dropAwake();
   /* `done` means finish() already stored the session complete. Saving again
      here would overwrite that flag and drop actualSec. That is exactly what
      the Done button used to do. */
@@ -658,7 +662,7 @@ function setSound(on){
   META.sound=on;put("meta",META);
   /* Muting mid session must take the primer with it, or the phone keeps an
      audio stream open for cues that will never play. */
-  if(on){tone(660,.08,.55);if($("sess").classList.contains("on"))startPrime();}
+  if(on){tone(660,.08,.55);startPrime();}
   else stopPrime();
 }
 $("sndBtn").addEventListener("click",()=>setSound(!sound));
@@ -712,8 +716,14 @@ $("volIn").addEventListener("input",e=>{
   VOL=(+e.target.value)/100;$("volNote").textContent=e.target.value+"%";});
 $("volIn").addEventListener("change",async e=>{
   META.vol=(+e.target.value)/100;await put("meta",META);tone(880,.085,.6);});
+/* The same five seconds a rest ends with, silent first second included. A test
+   that plays something else tests nothing. */
+let testing=false;
 $("volTest").addEventListener("click",()=>{
-  CUE_AT.forEach((k,i)=>setTimeout(tick,i*1000));setTimeout(goTone,CUE_AT.length*1000);});
+  if(testing)return;
+  testing=true;audio();
+  CUE_AT.forEach(k=>setTimeout(tick,(5-k)*1000));
+  setTimeout(()=>{goTone();testing=false;},5000);});
 $("impBtn").addEventListener("click",()=>$("impFile").click());
 $("impFile").addEventListener("change",async e=>{
   const f=e.target.files[0];if(!f)return;
