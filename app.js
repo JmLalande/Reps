@@ -26,7 +26,7 @@ const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%6
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v16";
+const APP_VERSION="v17";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -248,12 +248,6 @@ function audio(){
     lim.threshold.value=-3;lim.knee.value=6;lim.ratio.value=12;
     lim.attack.value=.003;lim.release.value=.1;
     lim.connect(actx.destination);
-    /* A note nobody hears, so the speaker is already running by the time one
-       matters. A phone takes about a seventh of a second to power the output,
-       and whatever plays first loses its front edge to that. */
-    const w=actx.createOscillator(),wg=actx.createGain();
-    wg.gain.value=0;w.connect(wg);wg.connect(actx.destination);
-    w.start();w.stop(actx.currentTime+.25);
   }
   if(actx.state==="suspended")actx.resume();
   return actx;
@@ -278,6 +272,23 @@ function tone(f,d,g,type){
    every time. */
 const CUE_AT=[4,3,2,1];
 function tick(){tone(880,.075,.5);if(navigator.vibrate)navigator.vibrate(14);}
+/* Thirty cycles a second, held under the whole session. A phone speaker cannot
+   move that low, so it is silence to your ear and real signal to the phone,
+   which powers the output stage down after silence and takes about a seventh of
+   a second to bring it back. Whatever plays first into a cold output loses its
+   front edge, and that was the first beep of every countdown. Digital silence
+   does not hold the stage open, which is why a muted warm up note did nothing. */
+let prime=null;
+function startPrime(){
+  if(prime||!sound)return;
+  try{
+    const a=audio(),o=a.createOscillator(),g=a.createGain();
+    o.type="sine";o.frequency.value=30;g.gain.value=.012;
+    o.connect(g);g.connect(a.destination);o.start();
+    prime=o;
+  }catch(e){}
+}
+function stopPrime(){try{prime&&prime.stop();}catch(e){}prime=null;}
 function goTone(){tone(1320,.22,.77);if(navigator.vibrate)navigator.vibrate([26,50,26]);}
 
 /* Hold the screen awake while a session runs. Android takes the lock back on
@@ -299,7 +310,7 @@ addEventListener("visibilitychange",()=>{
    browser lets us open the audio device, since it runs inside the tap. */
 const LEAD=5;
 function startSession(){
-  if(sound){try{audio();}catch(e){}}
+  if(sound){try{audio();startPrime();}catch(e){}}
   dayKey=new Date().getDay();
   /* Stamp day one before the phases are built, or the very first session is the
      one session the on-ramp never applies to. */
@@ -533,7 +544,7 @@ async function saveSession(complete,actual){
 }
 function leaveSession(){
   $("sess").classList.remove("on");
-  dropAwake();
+  dropAwake();stopPrime();
   /* `done` means finish() already stored the session complete. Saving again
      here would overwrite that flag and drop actualSec. That is exactly what
      the Done button used to do. */
@@ -645,7 +656,10 @@ function setSound(on){
   $("sndBtn").setAttribute("aria-pressed",on?"true":"false");
   $("sndToggle").textContent=on?"Cues on":"Cues off";
   META.sound=on;put("meta",META);
-  if(on)tone(660,.08,.55);
+  /* Muting mid session must take the primer with it, or the phone keeps an
+     audio stream open for cues that will never play. */
+  if(on){tone(660,.08,.55);if($("sess").classList.contains("on"))startPrime();}
+  else stopPrime();
 }
 $("sndBtn").addEventListener("click",()=>setSound(!sound));
 $("sndToggle").addEventListener("click",()=>setSound(!sound));

@@ -8,128 +8,110 @@ body{background:#0A0B0C;color:#E8EAEC;font:400 16px/1.5 -apple-system,BlinkMacSy
 h1{font-size:21px;font-weight:600;letter-spacing:-.02em}
 p.sub{color:#8B9196;font-size:14px;margin-top:8px}
 h2{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:#6E7479;font-weight:500;margin:30px 0 12px}
-button.big{display:block;width:100%;padding:20px;border:1px solid #23262A;border-radius:18px;background:#141619;
-  color:#E8EAEC;font:600 17px/1.3 inherit;text-align:left;margin-bottom:12px;transition:background .15s}
-button.big:active{background:#1D2024}
-button.big small{display:block;font-weight:400;font-size:13px;color:#8B9196;margin-top:5px}
-button.big.fix{border-color:#2E7D5B}
-.row{display:flex;gap:10px;align-items:center;margin-bottom:14px}
-.row label{font-size:14px;color:#8B9196;flex:1}
-input[type=range]{width:100%;accent-color:#E8EAEC}
-.dots{display:flex;gap:9px;height:22px;align-items:center;margin:18px 0 6px}
+a.big,button.big{display:block;width:100%;padding:20px;border:1px solid #23262A;border-radius:18px;background:#141619;
+  color:#E8EAEC;font:600 17px/1.3 inherit;text-align:left;margin-bottom:12px;text-decoration:none}
+a.big small,button.big small{display:block;font-weight:400;font-size:13px;color:#8B9196;margin-top:5px}
+button.play{background:#E8EAEC;color:#0A0B0C;border-color:#E8EAEC;text-align:center;font-size:19px;padding:26px}
+button.play:disabled{background:#141619;color:#6E7479;border-color:#23262A}
+.dots{display:flex;gap:9px;height:22px;align-items:center;margin:20px 0 6px;justify-content:center}
 .dots i{width:13px;height:13px;border-radius:50%;background:#23262A;transition:transform .06s,background .06s}
 .dots i.go{width:19px;height:19px}
 .dots i.lit{background:#E8EAEC;transform:scale(1.35)}
 .dots i.go.lit{background:#63D19E}
-table{width:100%;border-collapse:collapse;font:400 14px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;margin-top:12px}
-td{padding:7px 0;border-bottom:1px solid #17191C}
-td:last-child{text-align:right}
-td.bad{color:#FF8B6B}td.ok{color:#63D19E}
-.verdict{margin-top:14px;font-size:14px;color:#8B9196;min-height:22px}
+.tag{display:inline-block;font:500 12px/1 inherit;letter-spacing:.1em;text-transform:uppercase;
+  padding:7px 11px;border-radius:8px;background:#1D2024;color:#8B9196;margin-bottom:16px}
+.note{color:#6E7479;font-size:13px;margin-top:18px}
+.row{display:flex;gap:10px;align-items:center;margin:16px 0 8px}
+.row label{font-size:14px;color:#8B9196;flex:1}
+input[type=range]{width:100%;accent-color:#E8EAEC}
 </style></head><body>
 
-<h1>Countdown test</h1>
-<p class="sub">Not the app. The app still has the old one. Nothing ships until you say so.</p>
+<div id="menu" style="display:none">
+  <h1>Countdown test</h1>
+  <p class="sub">The phone only swallows a beep when the speaker has been quiet. So each version is its own page load, and you get one play per load. Open one, listen, come back.</p>
+  <h2>Pick one</h2>
+  <a class="big" href="?v=now">A &middot; what the app has now
+    <small>Nothing warms the speaker up. This is the one where beep 1 is quiet.</small></a>
+  <a class="big" href="?v=prime">B &middot; with the inaudible primer
+    <small>A 30 Hz tone you cannot hear runs from the tap, so the speaker is already awake.</small></a>
+</div>
 
-<h2>Listen</h2>
-<button class="big fix" id="new">The proposal
-  <small>One second of quiet, then four beeps and the tone. Five sounds, five seconds.</small></button>
-<button class="big" id="old">What the app has now
-  <small>Five beeps and the tone, and the first beep half swallowed.</small></button>
-
-<div class="dots" id="dots"></div>
-
-<h2>Settings</h2>
-<div class="row"><label for="cold">Fresh sound device each time (reproduces opening the app)</label>
-  <input type="checkbox" id="cold" checked style="width:22px;height:22px;accent-color:#E8EAEC"></div>
-<div class="row"><label for="vol">Volume <span id="volN">100%</span></label></div>
-<input type="range" id="vol" min="20" max="200" step="10" value="100">
-
-<h2>What actually played</h2>
-<table id="out"><tr><td colspan="2" style="color:#6E7479">Play one.</td></tr></table>
-<div class="verdict" id="verdict"></div>
+<div id="test" style="display:none">
+  <span class="tag" id="tag"></span>
+  <h1>Listen to beep 1</h1>
+  <p class="sub">Is it the same as the other three, or quieter?</p>
+  <div class="dots" id="dots"></div>
+  <button class="big play" id="go">Play the countdown</button>
+  <div class="row"><label for="vol">Volume <span id="volN">200%</span></label></div>
+  <input type="range" id="vol" min="20" max="200" step="10" value="200">
+  <p class="note" id="after"></p>
+  <p class="note"><a href="?" style="color:#8B9196">Back to both versions</a></p>
+</div>
 
 <script>
-var VOL=1, actx=null, lim=null, dotEls=[];
+var V=(location.search.match(/v=(\w+)/)||[])[1];
+document.getElementById(V?"test":"menu").style.display="block";
+if(!V){/* menu only */}else{
 
-function audio(warm){
+var VOL=2, actx=null, lim=null, prime=null, dotEls=[];
+document.getElementById("tag").textContent = V==="prime" ? "B · with primer" : "A · as shipped";
+
+function audio(){
   if(!actx){
     actx=new (window.AudioContext||window.webkitAudioContext)();
     lim=actx.createDynamicsCompressor();
-    lim.threshold.value=-6;lim.knee.value=0;lim.ratio.value=20;
-    lim.attack.value=.002;lim.release.value=.12;
+    lim.threshold.value=-3;lim.knee.value=6;lim.ratio.value=12;
+    lim.attack.value=.003;lim.release.value=.1;
     lim.connect(actx.destination);
-    /* A note nobody hears, so the device is already running by the time one
-       matters. Without it the very first sound of a session is the one the
-       speaker eats while it wakes up. */
-    if(warm){var o=actx.createOscillator(),g=actx.createGain();
-      g.gain.value=0;o.connect(g);g.connect(actx.destination);
-      o.start();o.stop(actx.currentTime+.25);}
+    if(V==="prime"){
+      /* Thirty cycles a second. A phone speaker cannot move that low, so it is
+         real signal to the operating system and nothing to your ear. It keeps
+         the output stage powered so the first beep is not the one that wakes
+         it up. */
+      var o=actx.createOscillator(),g=actx.createGain();
+      o.type="sine";o.frequency.value=30;g.gain.value=.012;
+      o.connect(g);g.connect(actx.destination);o.start();
+      prime={o:o};
+    }
   }
   if(actx.state==="suspended")actx.resume();
   return actx;
 }
-function tone(f,d,g,type){
-  try{
-    var a=audio(),t=a.currentTime,dur=d||.1;
-    var o=a.createOscillator(),v=a.createGain();
-    o.type=type||"sine";o.frequency.value=f;
-    v.gain.value=0;o.connect(v);v.connect(lim);
-    v.gain.linearRampToValueAtTime(Math.max(.0002,(g||.5)*VOL),t+.012);
-    v.gain.exponentialRampToValueAtTime(.0001,t+dur);
-    o.start(t);o.stop(t+dur+.02);
-    return t;
-  }catch(e){return null;}
+function tone(f,d,g){
+  var a=audio(),t=a.currentTime,dur=d||.1;
+  var o=a.createOscillator(),v=a.createGain();
+  o.type="sine";o.frequency.value=f;
+  v.gain.value=0;o.connect(v);v.connect(lim);
+  v.gain.linearRampToValueAtTime(Math.max(.0002,g*VOL),t+.012);
+  v.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.start(t);o.stop(t+dur+.02);
 }
-function tick(){return tone(880,.075,.5);}
-function goTone(){return tone(1320,.22,.77);}
-
-function dots(n){
-  var host=document.getElementById("dots");host.innerHTML="";dotEls=[];
-  for(var i=0;i<n;i++){var d=document.createElement("i");if(i===n-1)d.className="go";
-    host.appendChild(d);dotEls.push(d);}
-}
-function flash(i){if(!dotEls[i])return;dotEls[i].classList.add("lit");
+for(var i=0;i<5;i++){var d=document.createElement("i");if(i===4)d.className="go";
+  document.getElementById("dots").appendChild(d);dotEls.push(d);}
+function flash(i){dotEls[i].classList.add("lit");
   setTimeout(function(){dotEls[i].classList.remove("lit");},170);}
-function reset(n){
-  if(document.getElementById("cold").checked&&actx){try{actx.close();}catch(e){}actx=null;lim=null;}
-  dots(n);
-  document.getElementById("out").innerHTML='<tr><td colspan="2" style="color:#6E7479">Playing…</td></tr>';
-  document.getElementById("verdict").textContent="";
-}
-function report(times){
-  var rows="",worst=0;
-  for(var i=1;i<times.length;i++){
-    var gap=times[i]-times[i-1],off=Math.abs(gap-1);
-    if(off>worst)worst=off;
-    rows+="<tr><td>sound "+i+" to sound "+(i+1)+"</td><td class='"+(off>.05?"bad":"ok")+"'>"
-      +gap.toFixed(3)+" s</td></tr>";
-  }
-  document.getElementById("out").innerHTML=rows;
-  document.getElementById("verdict").textContent = worst>.05
-    ? "Off by "+Math.round(worst*1000)+" ms at the worst gap."
-    : "Every gap is one second.";
-}
 
-/* The clock runs, each sound is fired the moment its mark passes. Same engine in
-   both, the only difference is which marks are on the list. */
-function play(marks){
-  reset(marks.length+1);
-  var start=Date.now(),cued=0,times=[],a=audio(true);
+document.getElementById("go").onclick=function(){
+  var b=this;b.disabled=true;b.textContent="Listening…";
+  var marks=[4,3,2,1],start=Date.now(),cued=0,a=audio();
   (function frame(){
     var left=5-(Date.now()-start)/1000;
     while(cued<marks.length&&left<=marks[cued]){
       var k=marks[cued++];
-      if(left>k-.6){times.push(tick());flash(cued-1);}
+      if(left>k-.6){tone(880,.075,.5);flash(cued-1);}
     }
-    if(left<=0){times.push(goTone());flash(marks.length);report(times);return;}
+    if(left<=0){
+      tone(1320,.22,.77);flash(4);
+      b.textContent="Played";
+      document.getElementById("after").textContent=
+        "Reload this page for another cold test, or go back and try the other one.";
+      if(prime)try{prime.o.stop();}catch(e){}
+      return;
+    }
     requestAnimationFrame(frame);
   })();
-}
-document.getElementById("new").onclick=function(){play([4,3,2,1]);};
-document.getElementById("old").onclick=function(){play([5,4,3,2,1]);};
-
+};
 document.getElementById("vol").oninput=function(e){
   VOL=(+e.target.value)/100;document.getElementById("volN").textContent=e.target.value+"%";};
-dots(5);
+}
 </script></body></html>
