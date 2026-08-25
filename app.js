@@ -26,7 +26,7 @@ const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%6
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v14";
+const APP_VERSION="v15";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -266,13 +266,10 @@ function tone(f,d,g,type){
 }
 /* One cue per second for the last five, then the tone. Every timer that feels
    right does it this way: the beat is the message. The ear locks onto a steady
-   interval and knows where zero is without counting. Spacing them out breaks
-   that, which is why 5-3-1 read as three unrelated beeps instead of a countdown.
-   Two tiers rather than five identical beeps: five and four are get ready, and
-   three, two, one are the count. */
+   interval and knows where zero is without counting. Five identical ticks, one
+   tone at zero. Nothing else changes, or the beat stops being a beat. */
 const CUE_AT=[5,4,3,2,1];
-function tick(soft){tone(soft?698:880,.075,soft?.3:.5);
-  if(navigator.vibrate)navigator.vibrate(soft?9:14);}
+function tick(){tone(880,.075,.5);if(navigator.vibrate)navigator.vibrate(14);}
 function goTone(){tone(1320,.22,.77);if(navigator.vibrate)navigator.vibrate([26,50,26]);}
 
 /* Hold the screen awake while a session runs. Android takes the lock back on
@@ -550,7 +547,7 @@ function loop(){
       const lft=p.dur-el;
       /* A tick already well past its moment is one the phone slept through.
          Skip it, rather than fire the whole ramp at once on waking. */
-      while(cued<CUE_AT.length&&lft<=CUE_AT[cued]){const k=CUE_AT[cued++];if(lft>k-.6)tick(k>3);}
+      while(cued<CUE_AT.length&&lft<=CUE_AT[cued]){const k=CUE_AT[cued++];if(lft>k-.6)tick();}
     }
     render();
   }
@@ -694,7 +691,7 @@ $("volIn").addEventListener("input",e=>{
 $("volIn").addEventListener("change",async e=>{
   META.vol=(+e.target.value)/100;await put("meta",META);tone(880,.085,.6);});
 $("volTest").addEventListener("click",()=>{
-  CUE_AT.forEach((k,i)=>setTimeout(()=>tick(k>3),i*1000));setTimeout(goTone,5000);});
+  CUE_AT.forEach((k,i)=>setTimeout(tick,i*1000));setTimeout(goTone,5000);});
 $("impBtn").addEventListener("click",()=>$("impFile").click());
 $("impFile").addEventListener("change",async e=>{
   const f=e.target.files[0];if(!f)return;
