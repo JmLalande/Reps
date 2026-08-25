@@ -26,7 +26,7 @@ const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%6
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v13";
+const APP_VERSION="v14";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -288,12 +288,19 @@ function dropAwake(){try{wake&&wake.release();}catch(e){}wake=null;}
 addEventListener("visibilitychange",()=>{
   if(!document.hidden&&$("sess").classList.contains("on")&&!done)keepAwake();
 });
+/* Five seconds between the tap and the first rep. Landing straight into set one
+   with the clock already running meant setting up while losing time, so the
+   first rep of every session was the rushed one. It doubles as the moment the
+   browser lets us open the audio device, since it runs inside the tap. */
+const LEAD=5;
 function startSession(){
+  if(sound){try{audio();}catch(e){}}
   dayKey=new Date().getDay();
   /* Stamp day one before the phases are built, or the very first session is the
      one session the on-ramp never applies to. */
   if(!META.firstDay){META.firstDay=todayISO();put("meta",META);}
   PH=buildPhases(dayKey,onRamp());
+  PH.unshift(Object.assign({},PH[0],{type:"rest",lead:true,dur:LEAD}));
   idx=0;el=0;holding=false;done=false;finishing=false;drift=0;pendingWork=null;cued=0;
   anchor=Date.now();
   const existing=SESSIONS[todayISO()];
@@ -325,7 +332,8 @@ function render(){
   appEl.style.setProperty("--mut",th.mut);appEl.style.setProperty("--acc",th.acc);
   const left=p.dur-el,over=work&&left<0;
   let nextW=null;for(let i=idx+1;i<PH.length;i++){if(PH[i].type==="work"){nextW=PH[i];break;}}
-  $("phaseLbl").textContent=work?"Working":(holding?"Resting · set not logged":"Resting");
+  $("phaseLbl").textContent=work?"Working"
+    :(p.lead?"Get ready":(holding?"Resting · set not logged":"Resting"));
   const ct=over?("+"+fmt(-left)):fmt(left);
   $("clock").textContent=ct;
   $("clock").className="big mono"+(over?" over":"")+(ct.length>=5?" wide":"");
@@ -344,7 +352,8 @@ function render(){
   $("endAt").textContent=String(end.getHours()).padStart(2,"0")+":"+String(end.getMinutes()).padStart(2,"0");
   const green=Object.keys(SESSIONS).length<4;
   $("hint").firstChild.nodeValue=holding?"Log the set · ends "
-    :(green?(work?"Tap anywhere when the set is done · ends ":"Tap anywhere to start early · ends "):"Ends ");
+    :(p.lead?"Tap anywhere to start now · ends "
+    :(green?(work?"Tap anywhere when the set is done · ends ":"Tap anywhere to start early · ends "):"Ends "));
   const prog=Math.min(1,Math.max(0,el/p.dur));
   bar.style.strokeDashoffset=over?0:RLEN*prog;
   ring.classList.toggle("over",!!over);
