@@ -1,0 +1,146 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Countdown test</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#0A0B0C;color:#E8EAEC;font:400 16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  padding:26px 20px 60px;max-width:520px;margin:0 auto}
+h1{font-size:21px;font-weight:600;letter-spacing:-.02em}
+p.sub{color:#8B9196;font-size:14px;margin-top:8px}
+h2{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:#6E7479;font-weight:500;margin:30px 0 12px}
+button.big{display:block;width:100%;padding:20px;border:1px solid #23262A;border-radius:18px;background:#141619;
+  color:#E8EAEC;font:600 17px/1.3 inherit;text-align:left;margin-bottom:12px;transition:background .15s}
+button.big:active{background:#1D2024}
+button.big small{display:block;font-weight:400;font-size:13px;color:#8B9196;margin-top:5px}
+button.big.fix{border-color:#2E7D5B}
+.row{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+.row label{font-size:14px;color:#8B9196;flex:1}
+input[type=range]{width:100%;accent-color:#E8EAEC}
+.dots{display:flex;gap:9px;height:22px;align-items:center;margin:18px 0 6px}
+.dots i{width:13px;height:13px;border-radius:50%;background:#23262A;transition:transform .06s,background .06s}
+.dots i.go{width:19px;height:19px}
+.dots i.lit{background:#E8EAEC;transform:scale(1.35)}
+.dots i.go.lit{background:#63D19E}
+table{width:100%;border-collapse:collapse;font:400 14px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;margin-top:12px}
+td{padding:7px 0;border-bottom:1px solid #17191C}
+td:last-child{text-align:right}
+td.bad{color:#FF8B6B}td.ok{color:#63D19E}
+.verdict{margin-top:14px;font-size:14px;color:#8B9196;min-height:22px}
+</style></head><body>
+
+<h1>Countdown test</h1>
+<p class="sub">This page is not the app. The app is untouched. Play both, tell me which one sounds right.</p>
+
+<h2>Listen</h2>
+<button class="big" id="a">A &middot; what the app does now
+  <small>Each beep is fired the moment the clock reaches it.</small></button>
+<button class="big fix" id="b">B &middot; the fix
+  <small>All six are handed to the sound card at once, one second apart.</small></button>
+
+<div class="dots" id="dots"></div>
+
+<h2>Settings</h2>
+<div class="row"><label for="cold">Fresh sound device each time (reproduces opening the app)</label>
+  <input type="checkbox" id="cold" checked style="width:22px;height:22px;accent-color:#E8EAEC"></div>
+<div class="row"><label for="vol">Volume <span id="volN">100%</span></label></div>
+<input type="range" id="vol" min="20" max="200" step="10" value="100">
+
+<h2>What actually played</h2>
+<table id="out"><tr><td colspan="2" style="color:#6E7479">Play one.</td></tr></table>
+<div class="verdict" id="verdict"></div>
+
+<script>
+var VOL=1, actx=null, lim=null, dotEls=[];
+var CUE_AT=[5,4,3,2,1];
+
+for(var i=0;i<6;i++){var d=document.createElement("i");if(i===5)d.className="go";
+  document.getElementById("dots").appendChild(d);dotEls.push(d);}
+
+function audio(){
+  if(!actx){
+    actx=new (window.AudioContext||window.webkitAudioContext)();
+    lim=actx.createDynamicsCompressor();
+    lim.threshold.value=-6;lim.knee.value=0;lim.ratio.value=20;
+    lim.attack.value=.002;lim.release.value=.12;
+    lim.connect(actx.destination);
+  }
+  if(actx.state==="suspended")actx.resume();
+  return actx;
+}
+/* Exactly the tone function that is in the app today. */
+function tone(f,d,g,type){
+  try{
+    var a=audio(),t=a.currentTime,dur=d||.1;
+    var o=a.createOscillator(),v=a.createGain();
+    o.type=type||"sine";o.frequency.value=f;
+    v.gain.value=0;o.connect(v);v.connect(lim);
+    v.gain.linearRampToValueAtTime(Math.max(.0002,(g||.5)*VOL),t+.012);
+    v.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.start(t);o.stop(t+dur+.02);
+    return t;
+  }catch(e){return null;}
+}
+/* Same note, but placed at a time you choose instead of right now. */
+function toneAt(a,at,f,d,g){
+  var dur=d||.1;
+  var o=a.createOscillator(),v=a.createGain();
+  o.type="sine";o.frequency.value=f;
+  v.gain.value=0;o.connect(v);v.connect(lim);
+  v.gain.linearRampToValueAtTime(Math.max(.0002,(g||.5)*VOL),at+.012);
+  v.gain.exponentialRampToValueAtTime(.0001,at+dur);
+  o.start(at);o.stop(at+dur+.02);
+  return at;
+}
+
+function reset(){
+  if(document.getElementById("cold").checked&&actx){try{actx.close();}catch(e){}actx=null;lim=null;}
+  dotEls.forEach(function(d){d.classList.remove("lit");});
+  document.getElementById("out").innerHTML='<tr><td colspan="2" style="color:#6E7479">Playing…</td></tr>';
+  document.getElementById("verdict").textContent="";
+}
+function flash(i){dotEls[i].classList.add("lit");setTimeout(function(){dotEls[i].classList.remove("lit");},170);}
+
+function report(times){
+  var rows="",worst=0;
+  for(var i=1;i<times.length;i++){
+    var gap=times[i]-times[i-1];
+    var off=Math.abs(gap-1);if(off>worst)worst=off;
+    rows+="<tr><td>beep "+i+" to beep "+(i+1)+"</td><td class='"+(off>.05?"bad":"ok")+"'>"
+      +gap.toFixed(3)+" s</td></tr>";
+  }
+  document.getElementById("out").innerHTML=rows;
+  document.getElementById("verdict").textContent = worst>.05
+    ? "Off by "+Math.round(worst*1000)+" ms at the worst gap. That is the one you can hear."
+    : "Every gap is one second. Nothing to hear.";
+}
+
+/* A: the app as it is. A wall clock drives a frame loop and each beep is fired
+   when its moment arrives, into a sound device that was opened a heartbeat ago. */
+document.getElementById("a").onclick=function(){
+  reset();
+  var start=Date.now(),cued=0,times=[],a=audio();
+  (function frame(){
+    var left=5-(Date.now()-start)/1000;
+    while(cued<CUE_AT.length&&left<=CUE_AT[cued]){
+      var k=CUE_AT[cued++];
+      if(left>k-.6){times.push(tone(880,.075,.5));flash(5-k);}
+    }
+    if(left<=0){times.push(tone(1320,.22,.77));flash(5);report(times);return;}
+    requestAnimationFrame(frame);
+  })();
+};
+
+/* B: read the sound card's clock once, then place all six notes on it. Whatever
+   the device does with its own start up, the six move together. */
+document.getElementById("b").onclick=function(){
+  reset();
+  var a=audio(),t0=a.currentTime+.06,times=[];
+  for(var i=0;i<5;i++)times.push(toneAt(a,t0+i,880,.075,.5));
+  times.push(toneAt(a,t0+5,1320,.22,.77));
+  for(var j=0;j<6;j++)(function(j){setTimeout(function(){flash(j);},(t0-a.currentTime+j)*1000);})(j);
+  setTimeout(function(){report(times);},(t0-a.currentTime+5.1)*1000);
+};
+
+document.getElementById("vol").oninput=function(e){
+  VOL=(+e.target.value)/100;document.getElementById("volN").textContent=e.target.value+"%";};
+</script></body></html>
