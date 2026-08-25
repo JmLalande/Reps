@@ -26,7 +26,7 @@ const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%6
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v15";
+const APP_VERSION="v16";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -248,6 +248,12 @@ function audio(){
     lim.threshold.value=-3;lim.knee.value=6;lim.ratio.value=12;
     lim.attack.value=.003;lim.release.value=.1;
     lim.connect(actx.destination);
+    /* A note nobody hears, so the speaker is already running by the time one
+       matters. A phone takes about a seventh of a second to power the output,
+       and whatever plays first loses its front edge to that. */
+    const w=actx.createOscillator(),wg=actx.createGain();
+    wg.gain.value=0;w.connect(wg);wg.connect(actx.destination);
+    w.start();w.stop(actx.currentTime+.25);
   }
   if(actx.state==="suspended")actx.resume();
   return actx;
@@ -264,11 +270,13 @@ function tone(f,d,g,type){
     o.start(t);o.stop(t+dur+.02);
   }catch(e){}
 }
-/* One cue per second for the last five, then the tone. Every timer that feels
-   right does it this way: the beat is the message. The ear locks onto a steady
-   interval and knows where zero is without counting. Five identical ticks, one
-   tone at zero. Nothing else changes, or the beat stops being a beat. */
-const CUE_AT=[5,4,3,2,1];
+/* Five sounds across five seconds: a second of quiet, four identical beeps on
+   the beat, then the tone at zero. The ear locks onto a steady interval and
+   knows where zero is without counting, so nothing else may change, or the beat
+   stops being a beat. The quiet second is not padding. A beep at the five mark
+   fired while the speaker was still waking up, and it came out late and clipped
+   every time. */
+const CUE_AT=[4,3,2,1];
 function tick(){tone(880,.075,.5);if(navigator.vibrate)navigator.vibrate(14);}
 function goTone(){tone(1320,.22,.77);if(navigator.vibrate)navigator.vibrate([26,50,26]);}
 
@@ -691,7 +699,7 @@ $("volIn").addEventListener("input",e=>{
 $("volIn").addEventListener("change",async e=>{
   META.vol=(+e.target.value)/100;await put("meta",META);tone(880,.085,.6);});
 $("volTest").addEventListener("click",()=>{
-  CUE_AT.forEach((k,i)=>setTimeout(tick,i*1000));setTimeout(goTone,5000);});
+  CUE_AT.forEach((k,i)=>setTimeout(tick,i*1000));setTimeout(goTone,CUE_AT.length*1000);});
 $("impBtn").addEventListener("click",()=>$("impFile").click());
 $("impFile").addEventListener("change",async e=>{
   const f=e.target.files[0];if(!f)return;
