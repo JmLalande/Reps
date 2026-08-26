@@ -26,7 +26,7 @@ const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%6
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v18";
+const APP_VERSION="v19";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -70,6 +70,20 @@ function progressionNudge(){
 }
 const LADDER="Add reps, then lower over 3s, then pause 2s at the bottom, then the vest.";
 
+/* The main line is keyed to the day count and has to stay that way, or the
+   number on the screen stops matching the number in the sentence. Everything
+   worth reading that has no duration in it goes on the bonus line instead. */
+function showBonus(el,day,skipIndex){
+  const b=bonusFor(day,META.poolSeen,skipIndex);
+  el.textContent="";
+  const lbl=document.createElement("b");
+  lbl.textContent="Bonus";
+  el.appendChild(lbl);
+  el.appendChild(document.createTextNode(b.text));
+  el.style.display="block";
+  return b;
+}
+
 /* ------------------------------------------------------------------ today */
 const DOW=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 function renderToday(){
@@ -80,13 +94,15 @@ function renderToday(){
   $("streakN").textContent=streak;
   $("streakN").classList.toggle("zero",streak===0);
 
-  const msEl=$("mstone"), tzEl=$("tease");
-  tzEl.style.display="none";
+  const msEl=$("mstone"), bnEl=$("bonus");
+  bnEl.style.display="none";
   if(streak>0){
     const soon=DAYS[streak+1];
-    msEl.textContent=soon?("Tomorrow: "+soon):milestoneFor(streak,META.poolSeen).text;
+    const main=soon?null:milestoneFor(streak,META.poolSeen);
+    msEl.textContent=soon?("Tomorrow: "+soon):main.text;
     msEl.classList.toggle("ahead",!!soon);
     msEl.style.display="block";
+    showBonus(bnEl,streak,main&&main.poolIndex);
   }else if(META.lastStreak>1){
     msEl.textContent=breakMessage(META.lastBreak).text;
     msEl.classList.remove("ahead"); msEl.style.display="block";
@@ -529,8 +545,14 @@ function finish(){
     (streak>0?("Day "+streak+" in a row."):"");
   const ms=streak>0?milestoneFor(streak,META.poolSeen):null;
   $("doneMs").textContent=ms?ms.text:"";
-  if(ms&&!ms.keyed&&typeof ms.poolIndex==="number"&&!META.poolSeen.includes(ms.poolIndex)){
-    META.poolSeen.push(ms.poolIndex);
+  const bn=ms?showBonus($("doneBonus"),streak,ms.poolIndex):null;
+  if(!bn)$("doneBonus").style.display="none";
+  /* Either line can draw from the pool, so both get marked spent. */
+  let touched=false;
+  for(const i of [ms&&ms.poolIndex,bn&&bn.poolIndex]){
+    if(typeof i==="number"&&!META.poolSeen.includes(i)){META.poolSeen.push(i);touched=true;}
+  }
+  if(touched){
     if(META.poolSeen.length>=POOL.length)META.poolSeen=[];
     put("meta",META);
   }

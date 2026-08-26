@@ -82,7 +82,9 @@ nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;st
   font-variant-numeric:tabular-nums}
 .streakL{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);font-weight:500;line-height:1.5}
 .mstone{margin-top:26px;font-size:16.5px;line-height:1.6;font-weight:300;color:#E4E5E7}
-.tease{margin-top:12px;font-size:13.5px;color:var(--faint);font-weight:300}
+.bonus{margin-top:14px;font-size:13.5px;line-height:1.55;color:var(--faint);font-weight:300}
+.bonus b{font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:10.5px;color:var(--dim);
+  display:block;margin-bottom:4px}
 .go{display:block;width:100%;margin-top:30px;background:var(--pale);color:#0A0B0C;border-radius:999px;
   padding:21px;font-size:17px;font-weight:600;letter-spacing:-.01em;
   transition:transform .3s cubic-bezier(.2,.8,.3,1),background .3s ease}
@@ -226,6 +228,7 @@ details.cue b{color:var(--pale);font-weight:500}
   font-weight:700;letter-spacing:-.05em}
 .doneview p{color:var(--dim);margin-top:16px;font-size:16px;line-height:1.55;font-weight:300}
 .doneview .ms{margin-top:26px;font-size:16px;line-height:1.6;color:#E4E5E7;font-weight:300}
+.doneview .bonus{text-align:inherit}
 
 /* ---------- calendar ---------- */
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:16px}
@@ -340,6 +343,7 @@ details.cue b{color:var(--pale);font-weight:500}
       <div class="big2 mono" id="doneTime">0:00</div>
       <p id="doneNote"></p>
       <div class="ms" id="doneMs"></div>
+      <div class="bonus" id="doneBonus"></div>
       <button class="go" id="doneBtn" style="margin-top:26px">Done</button>
     </div>
   </div>
@@ -359,7 +363,7 @@ details.cue b{color:var(--pale);font-weight:500}
       <span class="streakL">day<br>streak</span>
     </div>
     <div class="mstone" id="mstone"></div>
-    <div class="tease" id="tease"></div>
+    <div class="bonus" id="bonus"></div>
     <div class="onramp" id="onramp" style="display:none"></div>
     <div class="nudge" id="nudge" style="display:none"></div>
     <button class="go" id="startBtn">Start session</button>
