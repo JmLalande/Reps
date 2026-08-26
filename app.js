@@ -18,7 +18,7 @@ function get(store,key){return new Promise((res,rej)=>{const q=tx(store,"readonl
   q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error);});}
 
 /* ------------------------------------------------------------------ state */
-let SESSIONS={}, META={k:"app",poolSeen:[],lastBreak:-1,sound:true,vol:1,firstDay:null,lastStreak:0}, WEIGHTS=[];
+let SESSIONS={}, META={k:"app",poolSeen:[],lastBreak:-1,sound:true,vol:1,firstDay:null,lastStreak:0,facts:null}, WEIGHTS=[];
 const $=id=>document.getElementById(id);
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const todayISO=()=>iso(new Date());
@@ -73,15 +73,28 @@ const LADDER="Add reps, then lower over 3s, then pause 2s at the bottom, then th
 /* The main line is keyed to the day count and has to stay that way, or the
    number on the screen stops matching the number in the sentence. Everything
    worth reading that has no duration in it goes on the bonus line instead. */
-function showBonus(el,day,skipIndex){
-  const b=bonusFor(day,META.poolSeen,skipIndex);
+function showBonus(el,text){
   el.textContent="";
   const lbl=document.createElement("b");
   lbl.textContent="Bonus";
   el.appendChild(lbl);
-  el.appendChild(document.createTextNode(b.text));
+  el.appendChild(document.createTextNode(text));
   el.style.display="block";
-  return b;
+}
+
+/* The done screen and the home screen have to show the same two facts for the
+   same day. Which ones come up depends on what the pool has already spent, and
+   finishing a session spends them, so picking twice would quietly swap the
+   bonus out from under you the moment the modal closed. Pick once a day. */
+function dayFacts(day){
+  if(META.facts&&META.facts.day===day)return META.facts;
+  const ms=milestoneFor(day,META.poolSeen);
+  const bn=bonusFor(day,META.poolSeen,ms.poolIndex);
+  META.facts={day:day,text:ms.text,
+    mainIndex:typeof ms.poolIndex==="number"?ms.poolIndex:null,
+    bonus:bn.text,bonusIndex:bn.poolIndex};
+  put("meta",META);
+  return META.facts;
 }
 
 /* ------------------------------------------------------------------ today */
@@ -96,16 +109,17 @@ function renderToday(){
 
   const msEl=$("mstone"), bnEl=$("bonus");
   bnEl.style.display="none";
+  /* The day you are on, never the day after. The fact is the reward for having
+     got here, and it is handed over first on the done screen at the end of the
+     session that earned it. Showing tomorrow's here spoiled that. */
   if(streak>0){
-    const soon=DAYS[streak+1];
-    const main=soon?null:milestoneFor(streak,META.poolSeen);
-    msEl.textContent=soon?("Tomorrow: "+soon):main.text;
-    msEl.classList.toggle("ahead",!!soon);
+    const f=dayFacts(streak);
+    msEl.textContent=f.text;
     msEl.style.display="block";
-    showBonus(bnEl,streak,main&&main.poolIndex);
+    showBonus(bnEl,f.bonus);
   }else if(META.lastStreak>1){
     msEl.textContent=breakMessage(META.lastBreak).text;
-    msEl.classList.remove("ahead"); msEl.style.display="block";
+    msEl.style.display="block";
   }else{ msEl.style.display="none"; }
 
   const or=$("onramp");
@@ -543,18 +557,20 @@ function finish(){
   const n=setCount(logged);
   $("doneNote").textContent=n+(n===1?" set logged. ":" sets logged. ")+
     (streak>0?("Day "+streak+" in a row."):"");
-  const ms=streak>0?milestoneFor(streak,META.poolSeen):null;
-  $("doneMs").textContent=ms?ms.text:"";
-  const bn=ms?showBonus($("doneBonus"),streak,ms.poolIndex):null;
-  if(!bn)$("doneBonus").style.display="none";
+  const f=streak>0?dayFacts(streak):null;
+  $("doneMs").textContent=f?f.text:"";
+  if(f)showBonus($("doneBonus"),f.bonus);
+  else $("doneBonus").style.display="none";
   /* Either line can draw from the pool, so both get marked spent. */
-  let touched=false;
-  for(const i of [ms&&ms.poolIndex,bn&&bn.poolIndex]){
-    if(typeof i==="number"&&!META.poolSeen.includes(i)){META.poolSeen.push(i);touched=true;}
-  }
-  if(touched){
-    if(META.poolSeen.length>=POOL.length)META.poolSeen=[];
-    put("meta",META);
+  if(f){
+    let touched=false;
+    for(const i of [f.mainIndex,f.bonusIndex]){
+      if(typeof i==="number"&&!META.poolSeen.includes(i)){META.poolSeen.push(i);touched=true;}
+    }
+    if(touched){
+      if(META.poolSeen.length>=POOL.length)META.poolSeen=[];
+      put("meta",META);
+    }
   }
 }
 async function saveSession(complete,actual){
