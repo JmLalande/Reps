@@ -1,4 +1,4 @@
-const CACHE_NAME = 'reps-v19';
+const CACHE_NAME = 'reps-v20';
 const ASSETS = ['./','./index.html','./app.js','./program.js','./milestones.js','./manifest.json'];
 
 self.addEventListener('install', e => {
@@ -9,9 +9,17 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
+/* Only ever delete this app's own old caches. The Cache API is scoped to the
+   origin, not to the path, and this account serves more than one app from
+   jmlalande.github.io. An unfiltered sweep here reads as "delete every cache
+   that is not mine", which was right while Reps was alone on the domain and
+   wipes the neighbour's offline files now that it is not. */
+const CACHE_PREFIX = 'reps-';
+
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))));
+    Promise.all(keys.filter(k => k.startsWith(CACHE_PREFIX) && k !== CACHE_NAME)
+                    .map(k => caches.delete(k)))));
   self.clients.claim();
 });
 
