@@ -22,11 +22,21 @@ let SESSIONS={}, META={k:"app",poolSeen:[],lastBreak:-1,sound:true,vol:1,firstDa
 const $=id=>document.getElementById(id);
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const todayISO=()=>iso(new Date());
-const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");};
+/* Three ways to read a clock, and they are not interchangeable. A countdown is
+   ceil, so "4" means four seconds or less are left and the digit changes at the
+   same instant the beep for it fires. It used to be round, which flipped the
+   display to 4 at 4.5 while the tick waited for 4.0, and every beep in the
+   countdown landed half a second after its own number. A stopwatch is floor,
+   for the same reason in the other direction. Round is for a finished duration,
+   where there is nothing to line up against. */
+const clock=(s,f)=>{s=Math.max(0,f(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");};
+const fmt=s=>clock(s,Math.round);
+const cdn=s=>clock(s,v=>Math.ceil(v-1e-6));
+const upn=s=>clock(s,Math.floor);
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v20";
+const APP_VERSION="v21";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -250,6 +260,10 @@ function renderStats(){
 
 /* ---------------------------------------------------------------- session */
 let PH=[],idx=0,el=0,holding=false,done=false,dayKey=1,startedAt=0,drift=0,pendingWork=null;
+/* PLANNED is the whole day and never shrinks. PH does, because a resume drops
+   the sets already logged, and `plannedSec` in the record has to keep meaning
+   the length of the session that was planned rather than the part still left. */
+let PLANNED=0,CARRY=0;
 let logged=[],repVal=0,sound=true,finishing=false,raf=null,cued=0,anchor=0;
 const THEME={work:{bg:"#33150A",ink:"#FFE9DA",mut:"#C79173",acc:"#FF8A4C"},
              rest:{bg:"#072421",ink:"#DEF6F0",mut:"#78AFA5",acc:"#54DFC3"}};
@@ -350,11 +364,26 @@ function startSession(){
      one session the on-ramp never applies to. */
   if(!META.firstDay){META.firstDay=todayISO();put("meta",META);}
   PH=buildPhases(dayKey,onRamp());
+  PLANNED=LEAD+PH.reduce((a,p)=>a+p.dur,0);
+  const existing=SESSIONS[todayISO()];
+  logged=existing&&!existing.complete?existing.sets.slice():[];
+  CARRY=existing&&!existing.complete?(existing.activeSec||0):0;
+  /* Resume picks up at the first set that was never logged. Restarting the day
+     from set one and tapping back through the work already done was the whole
+     reason pausing was not worth it. A movement done one side at a time writes
+     a row per side, so rows are matched on movement and set, never counted. */
+  if(logged.length){
+    const had=new Set(logged.map(r=>r.m+"#"+r.set));
+    let cut=0;
+    while(cut<PH.length&&PH[cut].type==="work"&&had.has(PH[cut].m+"#"+PH[cut].set)){
+      cut++;
+      if(PH[cut]&&PH[cut].type==="rest")cut++;
+    }
+    if(cut>0&&cut<PH.length)PH=PH.slice(cut);
+  }
   PH.unshift(Object.assign({},PH[0],{type:"rest",lead:true,dur:LEAD}));
   idx=0;el=0;holding=false;done=false;finishing=false;drift=0;pendingWork=null;cued=0;
   anchor=Date.now();
-  const existing=SESSIONS[todayISO()];
-  logged=existing&&!existing.complete?existing.sets.slice():[];
   startedAt=existing&&existing.startedAt?existing.startedAt:Date.now();
   $("sStreak").textContent=computeStreak();
   $("doneview").classList.remove("on");
@@ -364,6 +393,13 @@ function startSession(){
   if(!raf)raf=requestAnimationFrame(loop);
 }
 function plannedTotal(){return PH.reduce((a,p)=>a+p.dur,0);}
+/* Seconds actually worked, with any pause left out of them. Phases already past
+   count at their planned length and `drift` carries how far off each one ran,
+   which is the same arithmetic finish() has always used to report the total. */
+function activeSoFar(){
+  let a=0;for(let i=0;i<idx;i++)a+=PH[i].dur;
+  return CARRY+a+Math.max(0,el)+drift;
+}
 function remaining(){let r=Math.max(0,PH[idx].dur-el);for(let i=idx+1;i<PH.length;i++)r+=PH[i].dur;return r;}
 const setLbl=p=>p.sets>1?"Set "+p.set+" of "+p.sets:"Single set";
 const rirLbl=r=>r[0]===r[1]?String(r[0]):r[0]+"–"+r[1];
@@ -384,7 +420,7 @@ function render(){
   let nextW=null;for(let i=idx+1;i<PH.length;i++){if(PH[i].type==="work"){nextW=PH[i];break;}}
   $("phaseLbl").textContent=work?"Working"
     :(p.lead?"Get ready":(holding?"Resting · set not logged":"Resting"));
-  const ct=over?("+"+fmt(-left)):fmt(left);
+  const ct=over?("+"+upn(-left)):cdn(left);
   $("clock").textContent=ct;
   $("clock").className="big mono"+(over?" over":"")+(ct.length>=5?" wide":"");
   const show=work?p:(nextW||p),sm=M[show.m];
@@ -407,7 +443,7 @@ function render(){
   const prog=Math.min(1,Math.max(0,el/p.dur));
   bar.style.strokeDashoffset=over?0:RLEN*prog;
   ring.classList.toggle("over",!!over);
-  $("logRest").textContent=fmt(Math.max(0,PH[idx].dur-el));
+  $("logRest").textContent=cdn(Math.max(0,PH[idx].dur-el));
 }
 function endWork(){
   const p=PH[idx],delta=el-p.dur;
@@ -548,7 +584,7 @@ function closeLog(isPr){
 }
 function finish(){
   done=true;
-  const actual=plannedTotal()+drift;
+  const actual=CARRY+plannedTotal()+drift;
   $("doneview").classList.add("on");
   $("doneTime").textContent=fmt(actual);
   saveSession(true,actual);
@@ -576,13 +612,22 @@ function finish(){
 async function saveSession(complete,actual){
   const date=todayISO();
   const rec={date,dayKey,startedAt,endedAt:Date.now(),
-    plannedSec:plannedTotal(),actualSec:actual||null,sets:logged.slice(),complete:!!complete};
+    plannedSec:PLANNED,actualSec:actual||null,activeSec:activeSoFar(),
+    sets:logged.slice(),complete:!!complete};
   SESSIONS[date]=rec;
   if(!META.firstDay){META.firstDay=date;}
   const st=computeStreak();
   if(st===0&&META.lastStreak>1){META.lastBreak=breakMessage(META.lastBreak).index;}
   META.lastStreak=st;
   await put("sessions",rec);await put("meta",META);
+}
+/* Pausing and quitting are the same act here: the sets are already saved, the
+   day is already on the streak, and the only difference is whether you come
+   back. So the button says pause, and the message says where to come back to. */
+function pauseSession(){
+  const some=logged.length>0;
+  leaveSession();
+  if(!done)toast(some?"Paused. Resume from the home screen.":"Session dropped.");
 }
 function leaveSession(){
   $("sess").classList.remove("on");
@@ -705,7 +750,7 @@ function setSound(on){
 }
 $("sndBtn").addEventListener("click",()=>setSound(!sound));
 $("sndToggle").addEventListener("click",()=>setSound(!sound));
-$("quitBtn").addEventListener("click",leaveSession);
+$("quitBtn").addEventListener("click",pauseSession);
 $("doneBtn").addEventListener("click",leaveSession);
 $("startBtn").addEventListener("click",startSession);
 $("editToday").addEventListener("click",()=>openEditor(todayISO()));

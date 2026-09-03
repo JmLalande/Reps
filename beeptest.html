@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Countdown test</title>
+<title>Loudness test</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:#0A0B0C;color:#E8EAEC;font:400 16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
@@ -8,53 +8,63 @@ body{background:#0A0B0C;color:#E8EAEC;font:400 16px/1.5 -apple-system,BlinkMacSy
 h1{font-size:21px;font-weight:600;letter-spacing:-.02em}
 p.sub{color:#8B9196;font-size:14px;margin-top:8px}
 h2{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:#6E7479;font-weight:500;margin:30px 0 12px}
-a.big,button.big{display:block;width:100%;padding:20px;border:1px solid #23262A;border-radius:18px;background:#141619;
-  color:#E8EAEC;font:600 17px/1.3 inherit;text-align:left;margin-bottom:12px;text-decoration:none}
-a.big small,button.big small{display:block;font-weight:400;font-size:13px;color:#8B9196;margin-top:5px}
-button.play{background:#E8EAEC;color:#0A0B0C;border-color:#E8EAEC;text-align:center;font-size:19px;padding:26px}
-button.play:disabled{background:#141619;color:#6E7479;border-color:#23262A}
-.dots{display:flex;gap:9px;height:22px;align-items:center;margin:20px 0 6px;justify-content:center}
+button.big{display:block;width:100%;padding:18px;border:1px solid #23262A;border-radius:18px;background:#141619;
+  color:#E8EAEC;font:600 17px/1.3 inherit;text-align:left;margin-bottom:10px}
+button.big small{display:block;font-weight:400;font-size:13px;color:#8B9196;margin-top:5px}
+button.big:disabled{opacity:.45}
+button.ab{background:#E8EAEC;color:#0A0B0C;border-color:#E8EAEC;text-align:center;font-size:17px}
+.dots{display:flex;gap:9px;height:22px;align-items:center;margin:18px 0 4px;justify-content:center}
 .dots i{width:13px;height:13px;border-radius:50%;background:#23262A;transition:transform .06s,background .06s}
 .dots i.go{width:19px;height:19px}
 .dots i.lit{background:#E8EAEC;transform:scale(1.35)}
 .dots i.go.lit{background:#63D19E}
-.tag{display:inline-block;font:500 12px/1 inherit;letter-spacing:.1em;text-transform:uppercase;
-  padding:7px 11px;border-radius:8px;background:#1D2024;color:#8B9196;margin-bottom:16px}
-.note{color:#6E7479;font-size:13px;margin-top:18px}
-.row{display:flex;gap:10px;align-items:center;margin:16px 0 8px}
+.row{display:flex;gap:10px;align-items:baseline;margin:18px 0 6px}
 .row label{font-size:14px;color:#8B9196;flex:1}
+.row b{font:500 14px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#E8EAEC}
 input[type=range]{width:100%;accent-color:#E8EAEC}
+.meter{height:8px;border-radius:5px;background:#1D2024;overflow:hidden;margin-top:14px}
+.meter i{display:block;height:100%;width:0;background:#63D19E;transition:width .05s}
+.meter i.hot{background:#E0703C}
+.note{color:#6E7479;font-size:13px;margin-top:16px}
+.now{color:#8B9196;font-size:13px;text-align:center;min-height:20px;margin-top:8px}
 </style></head><body>
 
-<div id="menu" style="display:none">
-  <h1>Countdown test</h1>
-  <p class="sub">The phone only swallows a beep when the speaker has been quiet. So each version is its own page load, and you get one play per load. Open one, listen, come back.</p>
-  <h2>Pick one</h2>
-  <a class="big" href="?v=now">A &middot; what the app has now
-    <small>Nothing warms the speaker up. This is the one where beep 1 is quiet.</small></a>
-  <a class="big" href="?v=prime">B &middot; with the inaudible primer
-    <small>A 30 Hz tone you cannot hear runs from the tap, so the speaker is already awake.</small></a>
-</div>
+<h1>Which countdown do you actually hear?</h1>
+<p class="sub">Same limiter, same primer, same five-second shape as the app. Only the sound of the beep changes. Play them back to back and pick the one that cuts through, not the one that measures highest.</p>
 
-<div id="test" style="display:none">
-  <span class="tag" id="tag"></span>
-  <h1>Listen to beep 1</h1>
-  <p class="sub">Is it the same as the other three, or quieter?</p>
-  <div class="dots" id="dots"></div>
-  <button class="big play" id="go">Play the countdown</button>
-  <div class="row"><label for="vol">Volume <span id="volN">200%</span></label></div>
-  <input type="range" id="vol" min="20" max="200" step="10" value="200">
-  <p class="note" id="after"></p>
-  <p class="note"><a href="?" style="color:#8B9196">Back to both versions</a></p>
-</div>
+<div class="dots" id="dots"></div>
+<div class="now" id="now"></div>
+
+<h2>One at a time</h2>
+<button class="big" data-v="0">A &middot; what the app has now
+  <small>880 Hz sine, 75 ms. A sine is the quietest shape there is for a given peak.</small></button>
+<button class="big" data-v="1">B &middot; higher, same shape
+  <small>2 kHz and 3 kHz. A phone speaker is weak under 1 kHz and your ear peaks near 3.</small></button>
+<button class="big" data-v="2">C &middot; same pitch, harder edge
+  <small>880 Hz square through a filter. More harmonics land where the speaker is efficient.</small></button>
+<button class="big" data-v="3">D &middot; higher, harder, longer
+  <small>2 kHz square, 130 ms. Loudness builds over about a sixth of a second, so a short beep sounds quieter than it is.</small></button>
+
+<h2>Back to back</h2>
+<button class="big ab" id="ab">A then D, one after the other</button>
+
+<div class="row"><label for="vol">Volume</label><b id="volN">200%</b></div>
+<input type="range" id="vol" min="20" max="400" step="10" value="200">
+<div class="meter"><i id="peakBar"></i></div>
+<p class="note" id="peakN">Peak output 0.00. Past 1.00 the limiter is the only thing keeping it clean.</p>
+<p class="note">The slider goes to 400% here and stops at 200% in the app. If you need more than 200 to hear it comfortably, that ceiling is the thing to change, not just the tone.</p>
 
 <script>
-var V=(location.search.match(/v=(\w+)/)||[])[1];
-document.getElementById(V?"test":"menu").style.display="block";
-if(!V){/* menu only */}else{
-
-var VOL=2, actx=null, lim=null, prime=null, dotEls=[];
-document.getElementById("tag").textContent = V==="prime" ? "B · with primer" : "A · as shipped";
+/* Four candidates. `wave`, `hz`, `go`, `ms` and `gain` are the only things that
+   differ; the limiter, the primer and the beat are the app's, untouched, so
+   what you are comparing is the sound of the beep and nothing else. */
+var V=[
+  {n:"A", wave:"sine",   hz:880,  go:1320, ms:.075, gain:.5,  gg:.77, lp:0},
+  {n:"B", wave:"sine",   hz:2000, go:3000, ms:.075, gain:.5,  gg:.77, lp:0},
+  {n:"C", wave:"square", hz:880,  go:1320, ms:.075, gain:.28, gg:.42, lp:3500},
+  {n:"D", wave:"square", hz:2000, go:3000, ms:.13,  gain:.28, gg:.42, lp:6000}
+];
+var VOL=2, actx=null, lim=null, ana=null, peak=0, busy=false, dotEls=[];
 
 function audio(){
   if(!actx){
@@ -62,28 +72,44 @@ function audio(){
     lim=actx.createDynamicsCompressor();
     lim.threshold.value=-3;lim.knee.value=6;lim.ratio.value=12;
     lim.attack.value=.003;lim.release.value=.1;
-    lim.connect(actx.destination);
-    if(V==="prime"){
-      /* Thirty cycles a second. A phone speaker cannot move that low, so it is
-         real signal to the operating system and nothing to your ear. It keeps
-         the output stage powered so the first beep is not the one that wakes
-         it up. */
-      var o=actx.createOscillator(),g=actx.createGain();
-      o.type="sine";o.frequency.value=30;g.gain.value=.012;
-      o.connect(g);g.connect(actx.destination);o.start();
-      prime={o:o};
-    }
+    /* Read the real output rather than trusting the numbers going in. The
+       limiter changes what comes out, so a gain of 1.0 does not mean a peak
+       of 1.0, in either direction. */
+    ana=actx.createAnalyser();ana.fftSize=2048;
+    lim.connect(ana);ana.connect(actx.destination);
+    var o=actx.createOscillator(),g=actx.createGain();
+    o.type="sine";o.frequency.value=30;g.gain.value=.012;
+    o.connect(g);g.connect(actx.destination);o.start();
+    meter();
   }
   if(actx.state==="suspended")actx.resume();
   return actx;
 }
-function tone(f,d,g){
-  var a=audio(),t=a.currentTime,dur=d||.1;
-  var o=a.createOscillator(),v=a.createGain();
-  o.type="sine";o.frequency.value=f;
-  v.gain.value=0;o.connect(v);v.connect(lim);
-  v.gain.linearRampToValueAtTime(Math.max(.0002,g*VOL),t+.012);
-  v.gain.exponentialRampToValueAtTime(.0001,t+dur);
+function meter(){
+  var buf=new Float32Array(ana.fftSize);
+  (function read(){
+    ana.getFloatTimeDomainData(buf);
+    var m=0;for(var i=0;i<buf.length;i++){var v=Math.abs(buf[i]);if(v>m)m=v;}
+    if(m>peak)peak=m;
+    var bar=document.getElementById("peakBar");
+    bar.style.width=Math.min(100,peak*100)+"%";
+    bar.className=peak>1?"hot":"";
+    document.getElementById("peakN").textContent=
+      "Peak output "+peak.toFixed(2)+". "+(peak>1
+        ? "Over 1.00, so the limiter is doing the work. Listen for whether it went harsh."
+        : "Under 1.00, clean.");
+    requestAnimationFrame(read);
+  })();
+}
+function tone(v,f,dur,g){
+  var a=audio(),t=a.currentTime;
+  var o=a.createOscillator(),amp=a.createGain(),node=amp;
+  o.type=v.wave;o.frequency.value=f;
+  if(v.lp){var lp=a.createBiquadFilter();lp.type="lowpass";lp.frequency.value=v.lp;
+    amp.connect(lp);node=lp;}
+  amp.gain.value=0;o.connect(amp);node.connect(lim);
+  amp.gain.linearRampToValueAtTime(Math.max(.0002,g*VOL),t+.012);
+  amp.gain.exponentialRampToValueAtTime(.0001,t+dur);
   o.start(t);o.stop(t+dur+.02);
 }
 for(var i=0;i<5;i++){var d=document.createElement("i");if(i===4)d.className="go";
@@ -91,27 +117,36 @@ for(var i=0;i<5;i++){var d=document.createElement("i");if(i===4)d.className="go"
 function flash(i){dotEls[i].classList.add("lit");
   setTimeout(function(){dotEls[i].classList.remove("lit");},170);}
 
-document.getElementById("go").onclick=function(){
-  var b=this;b.disabled=true;b.textContent="Listening…";
-  var marks=[4,3,2,1],start=Date.now(),cued=0,a=audio();
+/* The app's own countdown: a second of quiet, four beeps on the beat, the tone
+   at zero. Nothing here may drift off that beat or the comparison is not about
+   loudness any more. */
+function play(v,then){
+  busy=true;peak=0;
+  document.getElementById("now").textContent="Playing "+v.n;
+  var marks=[4,3,2,1],start=Date.now(),cued=0;audio();
   (function frame(){
     var left=5-(Date.now()-start)/1000;
     while(cued<marks.length&&left<=marks[cued]){
       var k=marks[cued++];
-      if(left>k-.6){tone(880,.075,.5);flash(cued-1);}
+      if(left>k-.6){tone(v,v.hz,v.ms,v.gain);flash(cued-1);}
     }
     if(left<=0){
-      tone(1320,.22,.77);flash(4);
-      b.textContent="Played";
-      document.getElementById("after").textContent=
-        "Reload this page for another cold test, or go back and try the other one.";
-      if(prime)try{prime.o.stop();}catch(e){}
+      tone(v,v.go,.22,v.gg);flash(4);
+      setTimeout(function(){busy=false;
+        document.getElementById("now").textContent="";
+        if(then)then();},700);
       return;
     }
     requestAnimationFrame(frame);
   })();
-};
-document.getElementById("vol").oninput=function(e){
-  VOL=(+e.target.value)/100;document.getElementById("volN").textContent=e.target.value+"%";};
 }
+function guard(fn){return function(){if(busy)return;fn();};}
+Array.prototype.forEach.call(document.querySelectorAll("button.big[data-v]"),function(b){
+  b.onclick=guard(function(){play(V[+b.dataset.v]);});
+});
+document.getElementById("ab").onclick=guard(function(){
+  play(V[0],function(){setTimeout(function(){play(V[3]);},900);});
+});
+document.getElementById("vol").oninput=function(e){
+  VOL=(+e.target.value)/100;document.getElementById("volN").textContent=e.target.value+"%";peak=0;};
 </script></body></html>
