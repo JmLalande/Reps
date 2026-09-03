@@ -36,7 +36,7 @@ const upn=s=>clock(s,Math.floor);
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v23";
+const APP_VERSION="v24";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -300,20 +300,16 @@ function audio(){
   if(!prime&&sound)startPrime();
   return actx;
 }
-/* `lp` is a lowpass in hertz. A square wave carries its energy in harmonics
-   that land where a phone speaker is efficient and the ear is sensitive, so at
-   the same peak it is far louder than a sine. Unfiltered it is also harsh, and
-   the lowpass takes the top off. Picked on a real phone against the sine and
-   two higher-pitched variants; this was the one that cut through. */
-function tone(f,d,g,type,lp){
+/* A sine, on purpose. A filtered square measured louder and was tried on a
+   real phone against this, and this one sounded better. Loudness is the volume
+   slider's job, which is why it goes to 400%. */
+function tone(f,d,g,type){
   if(!sound)return;
   try{
     const a=audio(),t=a.currentTime,dur=d||.1;
     const o=a.createOscillator(),v=a.createGain();
     o.type=type||"sine";o.frequency.value=f;
-    let out=v;
-    if(lp){const fl=a.createBiquadFilter();fl.type="lowpass";fl.frequency.value=lp;v.connect(fl);out=fl;}
-    v.gain.value=0;o.connect(v);out.connect(lim);
+    v.gain.value=0;o.connect(v);v.connect(lim);
     v.gain.linearRampToValueAtTime(Math.max(.0002,(g||.5)*VOL),t+.012);
     v.gain.exponentialRampToValueAtTime(.0001,t+dur);
     o.start(t);o.stop(t+dur+.02);
@@ -326,7 +322,7 @@ function tone(f,d,g,type,lp){
    fired while the speaker was still waking up, and it came out late and clipped
    every time. */
 const CUE_AT=[4,3,2,1];
-function tick(){tone(880,.075,.28,"square",3500);if(navigator.vibrate)navigator.vibrate(14);}
+function tick(){tone(880,.075,.5);if(navigator.vibrate)navigator.vibrate(14);}
 /* Thirty cycles a second, held under the whole session. A phone speaker cannot
    move that low, so it is silence to your ear and real signal to the phone,
    which powers the output stage down after silence and takes about a seventh of
@@ -344,7 +340,7 @@ function startPrime(){
   }catch(e){}
 }
 function stopPrime(){try{prime&&prime.stop();}catch(e){}prime=null;}
-function goTone(){tone(1320,.22,.42,"square",3500);if(navigator.vibrate)navigator.vibrate([26,50,26]);}
+function goTone(){tone(1320,.22,.77);if(navigator.vibrate)navigator.vibrate([26,50,26]);}
 
 /* Hold the screen awake while a session runs. Android takes the lock back on
    its own whenever the app leaves the foreground, so it is asked for again
