@@ -19,7 +19,7 @@ is the fallback that never repeats, `BREAKS` is what shows when a streak ends.
 
 - A day counts toward the streak as soon as **one set** is logged. Lower the floor.
 - The clock runs the whole session. Work never auto-advances — it counts into
-  overtime until you tap. Rest auto-advances, with five soft ticks and a low tone.
+  overtime until you tap. Rest auto-advances, with four ticks on the beat and a tone at zero.
 - Tapping anywhere ends the current phase and **shifts the entire remaining
   schedule**, so finishing early or late reflows the projected finish time.
 - Weeks 1–2 hold you to 3–4 reps in reserve on purpose. Week 3 the rule changes.
