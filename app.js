@@ -16,12 +16,20 @@ function all(store){return new Promise((res,rej)=>{const q=tx(store,"readonly").
   q.onsuccess=()=>res(q.result||[]);q.onerror=()=>rej(q.error);});}
 function get(store,key){return new Promise((res,rej)=>{const q=tx(store,"readonly").get(key);
   q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error);});}
+function del(store,key){return new Promise((res,rej)=>{const q=tx(store,"readwrite").delete(key);
+  q.onsuccess=()=>res();q.onerror=()=>rej(q.error);});}
 
 /* ------------------------------------------------------------------ state */
 let SESSIONS={}, META={k:"app",poolSeen:[],lastBreak:-1,sound:true,vol:1,firstDay:null,lastStreak:0,facts:null}, WEIGHTS=[];
 const $=id=>document.getElementById(id);
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-const todayISO=()=>iso(new Date());
+/* The day ends at 4 in the morning, not at midnight. A session at 2am after a
+   late night belongs to that evening, and a midnight cutoff filed it under the
+   next day and broke the streak for a day that was not missed. Everything that
+   asks "what day is it" goes through appNow; timestamps stay on the real clock. */
+const ROLLOVER_H=4;
+function appNow(){const d=new Date();if(d.getHours()<ROLLOVER_H)d.setDate(d.getDate()-1);return d;}
+const todayISO=()=>iso(appNow());
 /* Three ways to read a clock, and they are not interchangeable. A countdown is
    ceil, so "4" means four seconds or less are left and the digit changes at the
    same instant the beep for it fires. It used to be round, which flipped the
@@ -36,13 +44,13 @@ const upn=s=>clock(s,Math.floor);
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v24";
+const APP_VERSION="v25";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
 const setCount=a=>new Set((a||[]).map(x=>x.m+"#"+x.set)).size;
 function computeStreak(){
-  let n=0,d=new Date();
+  let n=0,d=appNow();
   if(!qualifies(SESSIONS[iso(d)]))d.setDate(d.getDate()-1);
   while(qualifies(SESSIONS[iso(d)])){n++;d.setDate(d.getDate()-1);}
   return n;
@@ -110,7 +118,7 @@ function dayFacts(day){
 /* ------------------------------------------------------------------ today */
 const DOW=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 function renderToday(){
-  const now=new Date(), dk=now.getDay(), day=WEEK[dk];
+  const now=appNow(), dk=now.getDay(), day=WEEK[dk];
   $("todayDate").textContent=DOW[dk]+" · "+now.toLocaleDateString(undefined,{month:"long",day:"numeric"});
   $("todayName").textContent=day.name;
   const streak=computeStreak();
@@ -181,7 +189,7 @@ function renderHistory(){
   for(let i=0;i<start;i++)h+="<div></div>";
   for(let d=1;d<=days;d++){
     const key=iso(new Date(y,mo,d)), s=SESSIONS[key];
-    const future=new Date(y,mo,d)>new Date();
+    const future=new Date(y,mo,d)>appNow();
     let cls="c";
     if(s&&s.complete)cls+=" done"; else if(qualifies(s))cls+=" part";
     else if(!future&&META.firstDay&&key>=META.firstDay)cls+=" miss";
@@ -362,7 +370,7 @@ addEventListener("visibilitychange",()=>{
 const LEAD=5;
 function startSession(){
   if(sound){try{audio();}catch(e){}}
-  dayKey=new Date().getDay();
+  dayKey=appNow().getDay();
   /* Stamp day one before the phases are built, or the very first session is the
      one session the on-ramp never applies to. */
   if(!META.firstDay){META.firstDay=todayISO();put("meta",META);}
@@ -725,7 +733,7 @@ $("edDel").addEventListener("click",async()=>{
   if(!edDate)return;
   const d=edDate;
   delete SESSIONS[d];
-  await new Promise((res,rej)=>{const q=tx("sessions","readwrite").delete(d);q.onsuccess=()=>res();q.onerror=()=>rej();});
+  await del("sessions",d);
   META.lastStreak=computeStreak(); await put("meta",META);
   $("editor").classList.remove("on"); edDate=null;
   renderToday();renderHistory();renderStats();toast("Session deleted");
@@ -829,6 +837,23 @@ async function ingest(d){
 async function load(){
   const s=await all("sessions");SESSIONS={};s.forEach(x=>SESSIONS[x.date]=x);
   const m=await get("meta","app");if(m)META=Object.assign(META,m);
+  /* Sessions saved before the 4am rollover carry the calendar date they were
+     started on. One started before 4 moves back to the evening it belongs to,
+     unless that evening already holds a different session. The same session
+     arriving twice, from an old export pasted in again, collapses into one. */
+  let moved=false;
+  for(const x of Object.values(SESSIONS)){
+    if(!x.startedAt)continue;
+    const st=new Date(x.startedAt);
+    if(st.getHours()>=ROLLOVER_H||x.date!==iso(st))continue;
+    st.setDate(st.getDate()-1);
+    const prev=iso(st), there=SESSIONS[prev];
+    if(there&&there.startedAt!==x.startedAt)continue;
+    const old=x.date;
+    x.date=prev;await put("sessions",x);await del("sessions",old);
+    delete SESSIONS[old];SESSIONS[prev]=x;moved=true;
+  }
+  if(moved){META.lastStreak=computeStreak();await put("meta",META);}
   sound=META.sound!==false;
   $("sndBtn").setAttribute("aria-pressed",sound?"true":"false");
   $("sndToggle").textContent=sound?"Cues on":"Cues off";

@@ -18,6 +18,7 @@ is the fallback that never repeats, `BREAKS` is what shows when a streak ends.
 ## How it behaves
 
 - A day counts toward the streak as soon as **one set** is logged. Lower the floor.
+- The day ends at **4am**, not midnight. A session at 2am counts for the evening before.
 - The clock runs the whole session. Work never auto-advances — it counts into
   overtime until you tap. Rest auto-advances, with four ticks on the beat and a tone at zero.
 - Tapping anywhere ends the current phase and **shifts the entire remaining
