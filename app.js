@@ -44,7 +44,7 @@ const upn=s=>clock(s,Math.floor);
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v25";
+const APP_VERSION="v26";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -272,7 +272,7 @@ let PH=[],idx=0,el=0,holding=false,done=false,dayKey=1,startedAt=0,drift=0,pendi
    the sets already logged, and `plannedSec` in the record has to keep meaning
    the length of the session that was planned rather than the part still left. */
 let PLANNED=0,CARRY=0;
-let logged=[],repVal=0,sound=true,finishing=false,raf=null,cued=0,anchor=0;
+let logged=[],repVal=0,sound=true,finishing=false,raf=null,cued=0,warned=false,anchor=0;
 const THEME={work:{bg:"#33150A",ink:"#FFE9DA",mut:"#C79173",acc:"#FF8A4C"},
              rest:{bg:"#072421",ink:"#DEF6F0",mut:"#78AFA5",acc:"#54DFC3"}};
 const appEl=$("app"),ring=$("ring"),track=ring.querySelector(".track"),bar=ring.querySelector(".bar");
@@ -331,6 +331,9 @@ function tone(f,d,g,type){
    every time. */
 const CUE_AT=[4,3,2,1];
 function tick(){tone(880,.075,.5);if(navigator.vibrate)navigator.vibrate(14);}
+/* Ten seconds out, a heads-up to get back into position, well clear of the countdown so it never reads as part of the beat. Lower and doubled, so the ear files it as a different sound from the ticks. A rest shorter than ten seconds skips it. */
+const WARN_AT=10;
+function warn(){tone(660,.09,.5);setTimeout(()=>tone(660,.09,.5),140);if(navigator.vibrate)navigator.vibrate(14);}
 /* Thirty cycles a second, held under the whole session. A phone speaker cannot
    move that low, so it is silence to your ear and real signal to the phone,
    which powers the output stage down after silence and takes about a seventh of
@@ -393,7 +396,7 @@ function startSession(){
     if(cut>0&&cut<PH.length)PH=PH.slice(cut);
   }
   PH.unshift(Object.assign({},PH[0],{type:"rest",lead:true,dur:LEAD}));
-  idx=0;el=0;holding=false;done=false;finishing=false;drift=0;pendingWork=null;cued=0;
+  idx=0;el=0;holding=false;done=false;finishing=false;drift=0;pendingWork=null;cued=0;warned=false;
   anchor=Date.now();
   startedAt=existing&&existing.startedAt?existing.startedAt:Date.now();
   $("sStreak").textContent=computeStreak();
@@ -470,7 +473,7 @@ function endRest(){
      a phone that slept through the end of a rest would wake up and hand back a
      whole fresh rest that has already been taken. */
   const carry=Math.max(0,el-p.dur);
-  idx++;el=0;cued=0;anchor=Date.now()-carry*1000;
+  idx++;el=0;cued=0;warned=false;anchor=Date.now()-carry*1000;
   if(idx>=PH.length){finish();return;}
   goTone();render();
 }
@@ -664,6 +667,7 @@ function loop(){
       const lft=p.dur-el;
       /* A tick already well past its moment is one the phone slept through.
          Skip it, rather than fire the whole ramp at once on waking. */
+      if(!warned&&lft<=WARN_AT){warned=true;if(lft>WARN_AT-.6)warn();}
       while(cued<CUE_AT.length&&lft<=CUE_AT[cued]){const k=CUE_AT[cued++];if(lft>k-.6)tick();}
     }
     render();
