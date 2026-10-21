@@ -1,7 +1,6 @@
 # Reps
 
-Fifteen minutes a day, at home. Shoulders, arms and upper chest, built around
-volleyball Monday and Wednesday and climbing Thursday.
+Reps, a fifteen-minute daily home workout web app on GitHub Pages (https://jmlalande.github.io/Reps/, repo `JmLalande/Reps`). Shoulders, arms and upper chest, built around volleyball Monday and Wednesday and climbing Thursday.
 
 Live: https://jmlalande.github.io/Reps/
 
@@ -23,7 +22,7 @@ is the fallback that never repeats, `BREAKS` is what shows when a streak ends.
   overtime until you tap. Rest auto-advances, with a double low beep ten seconds out, four ticks on the beat and a tone at zero.
 - Tapping anywhere ends the current phase and **shifts the entire remaining
   schedule**, so finishing early or late reflows the projected finish time.
-- Weeks 1–2 hold you to 3–4 reps in reserve on purpose. Week 3 the rule changes.
+- Weeks 1-2 hold you to 3-4 reps in reserve on purpose. Week 3 the rule changes.
 - Hit the top of a rep range twice running and it tells you to move up, and names
   the next rung on the ladder.
 
@@ -31,3 +30,9 @@ is the fallback that never repeats, `BREAKS` is what shows when a streak ends.
 
 IndexedDB, this browser only. **Export from the Progress tab now and then** —
 clearing site data wipes everything.
+
+`DB_NAME` (`reps-tracker`) and `CACHE_NAME` (`reps-v…`) start with `reps-`. They must never collide with another app on the same GitHub Pages account, because storage there is shared across every repo of the account (Loop uses `loop-`).
+
+## Deploying
+
+`APP_VERSION` in `app.js` and `CACHE_NAME` in `sw.js` bump together, every time. Out of sync means phones keep serving stale files.

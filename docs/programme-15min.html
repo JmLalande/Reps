@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15 minutes a day — the program</title>
+<style>/* Rose Pine Moon — canonical theme for lavish artifacts.
+   Matches wezterm (rose-pine-moon, opacity .9, blur 30, accent #FF5F91).
+   Inline this into the artifact's <style> so the file stays portable. */
+
+:root {
+  /* Rose Pine Moon */
+  --base: #232136;
+  --surface: #2a273f;
+  --overlay: #393552;
+  --hl-low: #2a283e;
+  --hl-med: #44415a;
+  --hl-high: #56526e;
+  --muted: #6e6a86;
+  --subtle: #908caa;
+  --text: #e0def4;
+
+  --love: #eb6f92;
+  --gold: #f6c177;
+  --rose: #ea9a97;
+  --pine: #3e8fb0;
+  --foam: #9ccfd8;
+  --iris: #c4a7e7;
+
+  /* wezterm tab accent */
+  --accent: #ff5f91;
+
+  /* glass — mirrors window_background_opacity .9 + macos blur 30 */
+  --glass: rgba(42, 39, 63, 0.55);
+  --glass-hi: rgba(57, 53, 82, 0.62);
+  --stroke: rgba(196, 167, 231, 0.14);
+  --stroke-hi: rgba(255, 95, 145, 0.55);
+  --blur: 30px;
+
+  --font: "Geist", ui-sans-serif, -apple-system, system-ui, sans-serif;
+  --mono: "Hack Nerd Font", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+:where(.grid, .flex) > *, :where([style*="grid"], [style*="flex"]) > * { min-width: 0; }
+:where(p, h1, h2, h3, h4, li, td, th, .badge) { overflow-wrap: anywhere; }
+:where(img, svg, video, canvas) { max-width: 100%; height: auto; }
+
+body {
+  margin: 0;
+  color: var(--text);
+  font: 16px/1.65 var(--font);
+  background: var(--base);
+  /* the wallpaper's aurora, as light bleeding through a dark pane */
+  background-image:
+    radial-gradient(ellipse 80% 55% at 12% 8%,  rgba(196, 167, 231, .20), transparent 60%),
+    radial-gradient(ellipse 70% 50% at 88% 22%, rgba(255, 95, 145, .17),  transparent 62%),
+    radial-gradient(ellipse 90% 60% at 72% 96%, rgba(246, 193, 119, .11), transparent 60%),
+    radial-gradient(ellipse 75% 55% at 22% 88%, rgba(62, 143, 176, .15),  transparent 62%),
+    radial-gradient(ellipse 60% 40% at 50% 55%, rgba(156, 207, 216, .07), transparent 70%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* Same lavender as wezterm's selection_bg / selection_fg. */
+::selection { background: rgba(196, 167, 231, .9); color: var(--base); }
+::-moz-selection { background: rgba(196, 167, 231, .9); color: var(--base); }
+
+code, pre, kbd { font-family: var(--mono); }
+code {
+  background: var(--hl-low);
+  color: var(--foam);
+  padding: .12em .38em;
+  border-radius: 4px;
+  font-size: .87em;
+}
+
+/* Frosted pane. The blur is what makes the aurora read as *behind* the surface,
+   the same way the wezterm window sits over the desktop. */
+.pane {
+  background: var(--glass);
+  backdrop-filter: blur(var(--blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(140%);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+}
+
+/* line-height 1 clips the glyph box vertically (lavish's audit calls this
+   clipped-text); the right padding absorbs letter-spacing's trailing gap. */
+.eyebrow {
+  font: 600 .72rem/1.5 var(--mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-right: .2em;
+}
+
+h1 { font-size: 2.1rem; line-height: 1.28; letter-spacing: -.022em; margin: .5rem 0 .6rem; padding-right: 3px; }
+h2 { font-size: 1.22rem; letter-spacing: -.012em; margin: .35rem 0 .5rem; }
+h3 { font-size: .95rem; margin: 0 0 .3rem; }
+.dim { color: var(--subtle); }
+.faint { color: var(--muted); }
+
+/* Choice control. Hover = iris stroke + diffuse glow; selected = pink.
+   Selected-locally must read as distinct from queued-for-agent. */
+label.opt {
+  display: flex;
+  gap: .8rem;
+  align-items: flex-start;
+  position: relative;
+  background: var(--glass-hi);
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: .95rem 1.05rem;
+  margin-bottom: .6rem;
+  cursor: pointer;
+  transition: border-color .14s ease, background .14s ease, transform .14s ease;
+}
+label.opt:hover {
+  border-color: var(--iris);
+  background: rgba(196, 167, 231, .1);
+  box-shadow: 0 0 0 1px var(--iris), 0 4px 20px -6px rgba(196, 167, 231, .45);
+  transform: translateX(2px);
+}
+label.opt:has(input:checked) { border-color: var(--stroke-hi); background: rgba(255, 95, 145, .07); }
+label.opt:has(input:checked):hover {
+  border-color: var(--accent);
+  background: rgba(255, 95, 145, .11);
+  box-shadow: 0 0 0 1px var(--accent), 0 4px 20px -6px rgba(255, 95, 145, .5);
+}
+label.opt input { margin-top: .32rem; accent-color: var(--accent); flex: none; }
+.opt-t { display: block; font-weight: 600; font-size: .93rem; }
+.opt-d { display: block; margin-top: .22rem; color: var(--subtle); font-size: .845rem; line-height: 1.5; }
+.rec {
+  margin-left: .45rem;
+  font: 700 .66rem/1.5 var(--mono);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+textarea, input[type="text"] {
+  width: 100%;
+  background: var(--hl-low);
+  color: var(--text);
+  border: 1px solid var(--stroke);
+  border-radius: 9px;
+  padding: .8rem;
+  font: inherit;
+  font-size: .9rem;
+  resize: vertical;
+}
+textarea:focus, input[type="text"]:focus {
+  outline: none;
+  border-color: var(--stroke-hi);
+  box-shadow: 0 0 0 3px rgba(255, 95, 145, .1);
+}
+
+button.send {
+  margin-top: 1rem;
+  border: 0;
+  border-radius: 9px;
+  padding: .68rem 1.35rem;
+  font: 600 .9rem var(--font);
+  color: var(--base);
+  background: linear-gradient(135deg, var(--accent), var(--iris));
+  cursor: pointer;
+  transition: filter .14s ease, transform .14s ease;
+}
+button.send:hover { filter: brightness(1.12); transform: translateY(-1px); }
+button.send:active { transform: translateY(0); }
+
+table { width: 100%; border-collapse: collapse; font-size: .89rem; }
+th, td { text-align: left; padding: .6rem .8rem; border-bottom: 1px solid var(--stroke); }
+th { color: var(--muted); font: 600 .72rem/1.5 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+<style>
+  .wrap { max-width: 940px; margin: 0 auto; padding: 3rem 1.4rem 5rem; }
+  .card { padding: 1.4rem 1.6rem; margin-bottom: 1.2rem; }
+  .hd { margin-bottom: 2.2rem; }
+  h3.day { font-size: 1.05rem; margin: 0; display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap; }
+  .dtag { font: 700 .64rem/1.5 var(--mono); letter-spacing: .09em; text-transform: uppercase;
+          padding: .18rem .55rem; border-radius: 4px; color: var(--base); }
+  .t-hard { background: var(--accent); }
+  .t-mod  { background: var(--gold); }
+  .t-light{ background: var(--foam); }
+  .t-tend { background: var(--iris); }
+  .sport { font: 600 .74rem var(--mono); color: var(--gold); }
+  table.ex { margin-top: .9rem; }
+  table.ex td:first-child { width: 42%; }
+  table.ex td:nth-child(2) { font-family: var(--mono); font-size: .83rem; color: var(--foam); white-space: nowrap; }
+  table.ex td:nth-child(3) { font-family: var(--mono); font-size: .83rem; color: var(--subtle); white-space: nowrap; }
+  table.ex td:last-child { color: var(--subtle); font-size: .82rem; }
+  .note { font-size: .85rem; color: var(--subtle); margin-top: .8rem; }
+  .note b { color: var(--text); }
+  .rulebox { padding: 1.5rem 1.7rem; margin-bottom: 1.2rem; }
+  .rulebox h2 { color: var(--gold); }
+  .rulebox ol { margin: .6rem 0 0; padding-left: 1.2rem; }
+  .rulebox li { margin-bottom: .8rem; font-size: .9rem; color: var(--subtle); }
+  .rulebox li b { color: var(--text); }
+  .flag { border-left: 3px solid var(--accent); padding-left: .95rem; margin: 1rem 0 0; font-size: .87rem; color: var(--subtle); }
+  .flag b { color: var(--accent); }
+  .ok { border-left: 3px solid var(--foam); padding-left: .95rem; margin: 1rem 0 0; font-size: .87rem; color: var(--subtle); }
+  .ok b { color: var(--foam); }
+  .wk td:first-child { font-family: var(--mono); font-weight: 600; color: var(--text); width: 70px; }
+  .wk td:nth-child(3) { color: var(--subtle); font-size: .82rem; }
+  .buy li { font-size: .89rem; margin-bottom: .45rem; color: var(--subtle); }
+  .buy li b { color: var(--text); }
+  .mv { border-top: 1px solid var(--stroke); padding: 1.1rem 0 .2rem; }
+  .mv:first-of-type { border-top: 0; }
+  .mv h4 { font-size: .98rem; color: var(--text); margin: 0 0 .5rem; }
+  .mv ol { margin: 0 0 .5rem; padding-left: 1.15rem; }
+  .mv li { font-size: .865rem; color: var(--subtle); margin-bottom: .32rem; }
+  .mv li b { color: var(--text); }
+  .cue { font-size: .84rem; color: var(--foam); margin: .5rem 0 0; }
+  .cue b { color: var(--foam); }
+  nav.toc { font-size: .86rem; margin: 1.2rem 0 0; }
+  nav.toc a { color: var(--iris); text-decoration: none; margin-right: 1.1rem; white-space: nowrap; }
+  nav.toc a:hover { text-decoration: underline; }
+  .chg li { font-size: .87rem; color: var(--subtle); margin-bottom: .4rem; }
+  .chg li b { color: var(--text); }
+
+  /* Legend: a two-column grid, not a table. Immune to the nowrap/colspan bug. */
+  .legend { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr); gap: .1rem 1.2rem; margin-top: 1rem; }
+  .legend dt { font: 600 .85rem/1.7 var(--mono); color: var(--foam); padding: .55rem 0; border-top: 1px solid var(--stroke); }
+  .legend dd { margin: 0; font-size: .875rem; color: var(--subtle); padding: .55rem 0; border-top: 1px solid var(--stroke); }
+  .legend dt:first-of-type, .legend dt:first-of-type + dd { border-top: 0; }
+  @media (max-width: 560px) {
+    .legend { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .legend dd { border-top: 0; padding-top: 0; padding-bottom: .8rem; }
+  }
+
+  /* Guards. nowrap belongs only on genuinely short cells. */
+  table { table-layout: auto; }
+  td[colspan], th[colspan] { white-space: normal !important; }
+  table.ex td:nth-child(2), table.ex td:nth-child(3) { word-break: keep-all; }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hd">
+    <div class="eyebrow">Home program · shoulders, arms, upper chest · v6</div>
+    <h1>15 minutes a day</h1>
+    <p class="dim" style="max-width:58ch">Built around volleyball Monday and Wednesday, climbing Thursday. Three movements a day, never more. Every session below has been timed with rest included — 15 minutes is the real number, not the aspiration.</p>
+    <nav class="toc">
+      <a href="#read">How to read this</a>
+      <a href="#week">The week</a>
+      <a href="#moves">How to do each movement</a>
+      <a href="#rules">Rules</a>
+      <a href="#whatif">What if…</a>
+    </nav>
+  </header>
+
+  <!-- HOW TO READ -->
+  <section class="pane card" id="read">
+    <h2>How to read this</h2>
+    <dl class="legend">
+      <dt>3 × 6–8</dt>
+      <dd>Three sets. Each set is 6 to 8 reps. If you get 9, the weight is too light. If you can't get 6, too heavy.</dd>
+      <dt>0–2 RIR</dt>
+      <dd>Reps In Reserve. Stop the set when you could have done 2 more, at most. See the explanation below — it's the rule that matters most.</dd>
+      <dt>rest 90s</dt>
+      <dd>Sit still for 90 seconds between sets. Not optional, it's how the session fits the timer.</dd>
+      <dt>4 × 3s holds</dt>
+      <dd>Four separate 3-second holds, resting about 5 seconds between each. That's one set.</dd>
+    </dl>
+    <p class="note" style="margin-top:1.2rem"><b>What 0–2 RIR actually feels like.</b> It is not "I'm tired." It's the point where the bar speed drops on its own — a rep that used to take one second now takes two, and you feel yourself grinding rather than lifting. When you hit a rep that's noticeably slower than the one before it, you have about 2 left. Stop there. You will overestimate how many you have left for the first month; everyone does. Being one rep too conservative costs you almost nothing. Being three too conservative costs you most of the point.</p>
+    <p class="ok"><b>When you do this in the day:</b> morning, before you eat. On Monday, Wednesday and Thursday that's 12+ hours before volleyball or climbing, which is more than enough separation — same-day training only interferes when the two sit within about 3 hours of each other.</p>
+  </section>
+
+  <!-- WEEK -->
+  <section class="pane card wk" id="week">
+    <h2>The week</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Day</th><th>Session</th><th>Also happening</th></tr></thead>
+      <tbody>
+        <tr><td>Mon</td><td>Press A — shoulders hard</td><td>Volleyball, evening</td></tr>
+        <tr><td>Tue</td><td>Arms</td><td>Late night before, keep it calm</td></tr>
+        <tr><td>Wed</td><td>Chest</td><td>Volleyball, evening</td></tr>
+        <tr><td>Thu</td><td>Side and rear delts — nothing that loads elbow or grip</td><td>Climbing</td></tr>
+        <tr><td>Fri</td><td>Press B — shoulders hard</td><td></td></tr>
+        <tr><td>Sat</td><td>Tendon — shoulder and knee</td><td></td></tr>
+        <tr><td>Sun</td><td>Chest and arms, deliberately easy</td><td></td></tr>
+      </tbody>
+    </table></div>
+    <p class="note"><b>Why the tendon day sits on Saturday:</b> it can't fall within 24 hours of volleyball or climbing, and Monday, Wednesday and Thursday evenings are taken. Saturday is the clean slot.</p>
+    <p class="note"><b>There's no rest day, and that's deliberate.</b> Every day has something. The expensive part of a daily practice isn't the work, it's deciding each morning whether today counts, and a schedule with a hole in it makes you decide seven times a week. Sunday is the release valve instead: same slot, same cue, half the effort.</p>
+  </section>
+
+  <!-- MON -->
+  <section class="pane card">
+    <h3 class="day">Monday · Press A <span class="dtag t-hard">Hard</span> <span class="sport">volleyball tonight</span></h3>
+    <div class="scroll"><table class="ex">
+      <thead><tr><th>Movement</th><th>Sets × reps</th><th>Rest</th><th>Load</th></tr></thead>
+      <tbody>
+        <tr><td>Half-kneeling one-arm press, helped up</td><td>3 × 5–6</td><td>90 s</td><td>16 kg</td></tr>
+        <tr><td>Lateral raise</td><td>3 × 12–15</td><td>45 s</td><td>dumbbells</td></tr>
+        <tr><td>Bent-over rear delt raise</td><td>2 × 15</td><td>40 s</td><td>dumbbells, or lighter</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note"><b>A "set" of the press is both arms.</b> Left 5–6, put the bell down, right 5–6, then rest 90 seconds. That's one set. Three of those. Start with your weaker arm and match the stronger one to it — don't let the strong side run ahead.</p>
+    <p class="note"><b>The app now takes a number for each arm.</b> Left and right get their own rep count and their own reps-in-reserve, because they are not the same arm and the log should say which one gave out.</p>
+    <p class="note">Runs 14 minutes with rest. That's why it's three sets of press and not four.</p>
+  </section>
+
+  <!-- TUE -->
+  <section class="pane card">
+    <h3 class="day">Tuesday · Arms <span class="dtag t-mod">Moderate</span></h3>
+    <div class="scroll"><table class="ex">
+      <thead><tr><th>Movement</th><th>Sets × reps</th><th>Rest</th><th>Load</th></tr></thead>
+      <tbody>
+        <tr><td>KB curl, two hands</td><td>4 × 12–15</td><td>60 s</td><td>16 kg</td></tr>
+        <tr><td>Overhead KB extension, two hands</td><td>3 × 10–12</td><td>60 s</td><td>16 kg</td></tr>
+        <tr><td>Bent-over rear delt raise</td><td>2 × 15</td><td>40 s</td><td>dumbbells</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Volleyball ran late last night. This day asks almost nothing of your nervous system — curls and extensions are muscle work, not effort work. If you feel wrecked, do it anyway and stretch the rests to 90 seconds.</p>
+  </section>
+
+  <!-- WED -->
+  <section class="pane card">
+    <h3 class="day">Wednesday · Chest <span class="dtag t-hard">Hard</span> <span class="sport">volleyball tonight</span></h3>
+    <div class="scroll"><table class="ex">
+      <thead><tr><th>Movement</th><th>Sets × reps</th><th>Rest</th><th>Load</th></tr></thead>
+      <tbody>
+        <tr><td>Feet-elevated push-ups on parallettes</td><td>4 × 8–15</td><td>75 s</td><td>bodyweight → vest</td></tr>
+        <tr><td>Lateral raise</td><td>3 × 12–15</td><td>45 s</td><td>dumbbells</td></tr>
+        <tr><td>KB swings</td><td>1 × 20</td><td>—</td><td>16 kg</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note"><b>Rep range matters here.</b> If you can do more than 15, raise your feet higher or put the vest on. If you can't do 8, lower your feet — or put your hands on the couch instead and work back down over a few weeks. Chasing 25 reps a set is conditioning, not chest.</p>
+    <p class="note">The swings are one set of 20, and then you're finished for the day. Takes under a minute.</p>
+  </section>
+
+  <!-- THU -->
+  <section class="pane card">
+    <h3 class="day">Thursday · Delts only <span class="dtag t-light">Light</span> <span class="sport">climbing</span></h3>
+    <div class="scroll"><table class="ex">
+      <thead><tr><th>Movement</th><th>Sets × reps</th><th>Rest</th><th>Load</th></tr></thead>
+      <tbody>
+        <tr><td>Lateral raise</td><td>4 × 12–15</td><td>45 s</td><td>dumbbells</td></tr>
+        <tr><td>Bent-over rear delt raise</td><td>3 × 15</td><td>40 s</td><td>dumbbells</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note"><b>Nothing that loads your elbow or your grip today.</b> No curls, no extensions, no pressing. You're climbing tonight and that's already a maximal grip and elbow session. Nine minutes and you're out.</p>
+    <p class="note">Same 0–2 RIR rule as every other day — an earlier version of this said "go to failure," which contradicted the rules. Ignore that if you remember reading it.</p>
+  </section>
+
+  <!-- FRI -->
+  <section class="pane card">
+    <h3 class="day">Friday · Press B <span class="dtag t-hard">Hard</span></h3>
+    <div class="scroll"><table class="ex">
+      <thead><tr><th>Movement</th><th>Sets × reps</th><th>Rest</th><th>Load</th></tr></thead>
+      <tbody>
+        <tr><td>Half-kneeling one-arm press, helped up</td><td>3 × 5–6</td><td>90 s</td><td>16 kg</td></tr>
+        <tr><td>KB curl, two hands</td><td>3 × 12–15</td><td>60 s</td><td>16 kg</td></tr>
+        <tr><td>Overhead KB extension</td><td>2 × 10–12</td><td>60 s</td><td>16 kg</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Same press as Monday, same weight, same target. Monday and Friday count as <b>separate</b> progressions — you can move up on one before the other, and you probably will, because Friday follows a rest-lighter week.</p>
+  </section>
+
+  <!-- SAT -->
+  <section class="pane card">
+    <h3 class="day">Saturday · Tendon — shoulder &amp; knee <span class="dtag t-tend">Boring on purpose</span></h3>
+    <div class="scroll"><table class="ex">
+      <thead><tr><th>Movement</th><th>Sets</th><th>Rest</th><th>Load</th></tr></thead>
+      <tbody>
+        <tr><td>Doorframe overhead press-up</td><td>3 sets of 4 × 3 s</td><td>60 s</td><td>nothing — you push the frame</td></tr>
+        <tr><td>Split-squat hold, back knee low</td><td>3 × 30 s each leg</td><td>45 s</td><td>bodyweight → vest</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">About 10 minutes, the shortest session of the week.</p>
+    <p class="note"><b>Why you push furniture instead of lifting the bell.</b> Tendons only adapt to loads above roughly 70% of a maximal effort, and the research protocol uses something near 90%. You can't reach that holding a 16 kg bell, but you can reach it instantly pushing against something that doesn't move. No equipment, no guessing at weight, and it's genuinely max effort.</p>
+    <p class="note"><b>Weeks 6–8:</b> turn the split-squat hold into slow reps, 3 seconds down, 3 seconds up, 8 reps, 3 sets. The doorframe press stays as it is.</p>
+  </section>
+
+  <!-- SUN -->
+  <section class="pane card">
+    <h3 class="day">Sunday · Chest &amp; arms <span class="dtag t-tend">The easy one</span></h3>
+    <div class="scroll"><table class="ex">
+      <thead><tr><th>Movement</th><th>Sets</th><th>Rest</th><th>Load</th></tr></thead>
+      <tbody>
+        <tr><td>Feet-elevated push-ups on parallettes</td><td>4 × 10–12</td><td>60 s</td><td>bodyweight → vest</td></tr>
+        <tr><td>KB curl, two hands</td><td>3 × 12–15</td><td>50 s</td><td>16 kg</td></tr>
+        <tr><td>Overhead KB extension</td><td>2 × 8–10</td><td>50 s</td><td>16 kg</td></tr>
+        <tr><td>KB swings</td><td>1 × 20</td><td>—</td><td>16 kg</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note"><b>Stop 2–3 reps short on every set here, all year.</b> The short rests are the tell: 50 seconds only works if you aren't near failure. This day feeds the two things the rest of the week under-feeds, chest and biceps, and it keeps the chain unbroken. It sits between the tendon day and Monday's pressing, so it can't afford to generate real fatigue.</p>
+    <p class="note"><b>Why the ranges here are narrow.</b> Sunday's targets are flat on purpose — the same number on set 4 as on set 1. A wide range like 8–15 invites you to take the first two sets at the top and then watch the last two collapse; on 60 seconds of rest that is what happens. Pick a number you can still hit when you're tired, and hit it four times.</p>
+    <p class="note"><b>If an elbow starts complaining,</b> swap the curls and extensions for the two table isometrics described below. Heavy isometrics are the treatment for tendon pain, not only the guard against it.</p>
+  </section>
+
+  <!-- MOVEMENTS -->
+  <section class="pane card" id="moves">
+    <h2>How to do each movement</h2>
+    <p class="note" style="margin-top:0">Written so you don't have to go find a video. If something here still doesn't make sense once you're standing there, that's a bug — tell me.</p>
+
+    <div class="mv">
+      <h4>Half-kneeling one-arm kettlebell press</h4>
+      <ol>
+        <li><b>Getting the bell up.</b> Standing, both hands on the handle, hoist it to one shoulder. Don't try to muscle it up one-armed from the floor — that's how people hit themselves in the face.</li>
+        <li><b>Where it sits.</b> Handle diagonally across your palm, the ball of the bell resting on the back of your forearm, knuckles pointing at the ceiling. It will feel like it's crushing your wrist for the first week. That's normal and it stops.</li>
+        <li><b>The position.</b> Bell in your <b>right</b> hand → <b>right</b> knee down, left foot planted in front. Same-side knee down. Reverse for the left.</li>
+        <li><b>"Ribs down."</b> Standing tall, your ribs flare up and your lower back arches. Exhale hard and let your ribcage settle toward your hips — you'll feel your abs switch on. That's the position. Hold it the whole set. If your lower back arches as you press, you lost it.</li>
+        <li><b>Up with two hands.</b> Both hands on the bell, press it overhead. The free hand gives exactly as much help as the working arm needs and no more — some reps it will barely touch it.</li>
+        <li><b>Down with one.</b> Let go with the free hand and lower it on the working arm alone, about three seconds, all the way to your shoulder. This is the rep that counts. Bicep beside your ear at the top, elbow tracking down past your ribs, no leaning sideways to slow it down.</li>
+        <li>Five or six of those on one side, put the bell down, switch, same again. Then rest 90 seconds.</li>
+      </ol>
+      <p class="cue"><b>Why it's built this way.</b> You can lower more than you can lift — everyone can, by about a third. At 16 kg the way up is above your strict press and the way down is not, so the way down is where the work is. Session one you got it up by kipping with your core, which trains the kip. Take the help on the way up and the set becomes six honest reps instead of four dishonest ones.</p>
+      <p class="cue"><b>Check:</b> if you can't control the lowering — it drops the last few inches — that side is done for the set. Stop there, don't grind out another.</p>
+    </div>
+
+    <div class="mv">
+      <h4>Bent-over rear delt raise</h4>
+      <ol>
+        <li><b>Hinge over</b> until your torso is roughly 45° — halfway between standing and parallel to the floor. Soft knees, not locked. Back flat, not rounded.</li>
+        <li>Dumbbells hanging straight down, palms facing each other.</li>
+        <li><b>Raise out to the sides</b> in a wide arc, like you're opening a curtain. Elbows slightly bent and <b>fixed</b> — the bend doesn't change during the rep.</li>
+        <li>Stop when your hands reach shoulder height. Lower slowly, 2 seconds.</li>
+      </ol>
+      <p class="cue"><b>Check:</b> you should feel it in the back of your shoulder, not in your neck or your lower back. If you're shrugging, the weight is too heavy — go lighter, even 3 lb. This is the one movement where light genuinely is better.</p>
+    </div>
+
+    <div class="mv">
+      <h4>Lateral raise</h4>
+      <ol>
+        <li>Stand up straight, dumbbells at your sides, palms facing your legs.</li>
+        <li>Slight bend in the elbows, fixed for the whole rep.</li>
+        <li><b>Raise straight out to the sides</b> until your hands are at shoulder height and no higher. Lead with your elbows, not your hands.</li>
+        <li>Lower over 2 seconds. Don't let them drop.</li>
+      </ol>
+      <p class="cue"><b>Check:</b> no swinging, no leaning back, no heaving with your hips. If you need momentum to start the rep, go lighter. This is the single most-cheated movement in any gym.</p>
+    </div>
+
+    <div class="mv">
+      <h4>Kettlebell curl · two hands</h4>
+      <ol>
+        <li>Both hands side by side on the <b>handle</b>, the flat top bar you'd carry it by. The ball hangs in front of your thighs.</li>
+        <li>Elbows pinned to your ribs. Curl to your chest, lower over 2–3 seconds.</li>
+        <li>The ball swings between your forearms on the way up. That's normal. Don't fight it out to the side.</li>
+      </ol>
+      <p class="cue"><b>Check:</b> if your elbows drift forward or your body swings, you're using your back. Stand with your back against a wall for a set if you're not sure.</p>
+      <p class="cue"><b>One arm is the goal, not the starting point.</b> 16 kg on a single arm is a lot of curl — most people who can press it clean still can't curl it. Two hands splits the bell roughly in half per side, which is why the range moves to 12–15. When you hit 15 on every set two sessions running, take one horn in one hand — the ball sitting <b>outside</b> your wrist rather than banging your forearm — and drop back to 8–10.</p>
+    </div>
+
+    <div class="mv">
+      <h4>Overhead kettlebell extension</h4>
+      <ol>
+        <li>Both hands cupped around the <b>ball</b> of the bell, handle pointing down at your back.</li>
+        <li>Press it overhead, arms straight.</li>
+        <li>Lower it behind your head by bending only at the elbows, until your forearms are past parallel. Upper arms stay still and point at the ceiling.</li>
+        <li>Press back up.</li>
+      </ol>
+      <p class="cue"><b>Check:</b> keep your elbows pointing forward and close together, not splaying out sideways. You can't see them — feel for whether they're drifting apart. Sit on a chair for this one if standing makes you arch your back.</p>
+    </div>
+
+    <div class="mv">
+      <h4>Kettlebell swing</h4>
+      <ol>
+        <li><b>This is a hip movement, not an arm movement and not a squat.</b> The bell goes where your hips send it.</li>
+        <li>Bell on the floor about a foot in front of you. Feet shoulder width. Hinge at the hips — push your butt back like you're closing a car door with it — and grab the handle with both hands.</li>
+        <li><b>Hike it back between your legs</b> like a football snap, forearms brushing your inner thighs.</li>
+        <li><b>Snap your hips forward</b> and stand up hard, squeezing your glutes. The bell floats up to about chest height on its own. You are not lifting it with your arms.</li>
+        <li>Let it fall, hinge again as it passes your hips, repeat.</li>
+      </ol>
+      <p class="cue"><b>Check:</b> your back stays flat the entire time. If you feel this in your lower back instead of your glutes and hamstrings, you're squatting it instead of hinging it — push the hips further back and let the bell swing lower. <b>Do the first 20 with no bell at all</b>, just hinging and snapping, before you ever pick it up.</p>
+      <p class="cue"><b>Apartment note:</b> swings are quiet if you never drop the bell. Set it down, don't release it.</p>
+    </div>
+
+    <div class="mv">
+      <h4>Feet-elevated push-ups on parallettes</h4>
+      <ol>
+        <li><b>The step:</b> anything stable at roughly 12 inches. A single stair, a low ottoman, a firm cushion on the floor, a stack of books. Not a rolling chair.</li>
+        <li><b>The 30° angle:</b> don't measure it. Point the far end of each parallette outward so the two of them make a shallow V, like the hands of a clock at 10 and 2. Eyeball it, then adjust until your wrists feel neutral.</li>
+        <li>Hands slightly wider than your shoulders. Feet up on the step.</li>
+        <li>Lower until your chest is level with your hands, or just below. Elbows about 45° from your ribs — not flared straight out to the sides.</li>
+      </ol>
+      <p class="cue"><b>Check:</b> body in one line from head to heels. If your hips sag or pike up, cut the set.</p>
+    </div>
+
+    <div class="mv">
+      <h4>The tendon holds</h4>
+      <p class="cue" style="margin-top:0">Only the doorframe press is in the week, on Saturday. The two table holds are your fallback if an elbow starts hurting: swap them in for Sunday's curls and extensions until it settles.</p>
+      <ol>
+        <li><b>Doorframe press-up (shoulder).</b> Stand in a doorway. Hands flat on the underside of the top frame, arms nearly straight but not locked. Push up as hard as you can for 3 seconds, like you're trying to lift the house. Relax 5 seconds. Four of those, then rest 60 seconds.</li>
+        <li><b>Under-table curl press (biceps tendon).</b> Sit at a heavy table. Palms up, hands flat under the tabletop, elbows at about 90°. Drive up into the table as hard as you can, 3 seconds. Same 4 × 3 s pattern.</li>
+        <li><b>Top-of-table press-down (triceps tendon).</b> Same table, palms down on top, elbows at about 90°. Press down as hard as you can, 3 seconds.</li>
+      </ol>
+      <p class="cue"><b>Effort is the whole point.</b> These look like nothing and should feel like everything — you're aiming for close to a maximal push. Nothing moves, so there's no risk in going all-out. If it feels easy, you're not pushing hard enough.</p>
+    </div>
+
+    <div class="mv">
+      <h4>Split-squat hold</h4>
+      <ol>
+        <li>Step one foot forward into a long stride — roughly a metre between your feet.</li>
+        <li>Drop straight down until your front knee is bent to about 90°. <b>Judging it:</b> your front thigh is roughly parallel to the floor, and your back knee is a few inches off the ground.</li>
+        <li>Torso upright, weight through the front heel. Hold still for 30 seconds.</li>
+        <li>You can rest one hand on a wall for balance. That's not cheating.</li>
+      </ol>
+      <p class="cue"><b>Check:</b> if 30 seconds is easy, put the vest on. If your leg quits at 15, stand up, rest, and do what's left — don't grind through a shaking hold.</p>
+    </div>
+  </section>
+
+  <!-- RULES -->
+  <section class="pane rulebox" id="rules">
+    <h2>Five rules</h2>
+    <ol>
+      <li><b>Warm up 2 minutes, then start the timer.</b> The warm-up isn't part of the 15. Do this: 30 seconds marching or jogging on the spot, 20 arm circles forward and 20 back, 10 slow bodyweight reps of whatever the first movement of the day is. On leg days add 10 bodyweight squats.</li>
+      <li><b>From week 3 on, push and pull go to 0–2 reps left.</b> Weeks 1 and 2 are the exception and they're deliberate — see rule 5. From week 3, this is the rule that separates growing from maintaining: every rep you leave in the tank costs about half a percentage point of growth, in a straight line that never flattens.</li>
+      <li><b>Every set has an effort target, not just a rep target.</b> The app shows it: <i>stop 2–3 short of failure</i>. Reps say how much work, effort says how hard, and only one of those was ever written down. A set taken to failure is not worth more than a set stopped two reps short — it costs more recovery for the same growth, and on a program with no rest day that debt has nowhere to go. During the first two weeks the target is looser still, 3–4 in reserve.</li>
+      <li><b>Progress when you hit the top of the range on every set, two sessions in a row.</b> With one fixed bell your ladder is, in order: <b>add reps</b> until you're at the top of the range → <b>slow the lowering</b> to 3 seconds → <b>pause 2 seconds</b> at the bottom → <b>add the vest</b> (works on push-ups and split squats; can't be used for curls or the press) → <b>buy the next bell up</b>. That ladder is worth roughly a year.</li>
+      <li><b>Write down your reps.</b> Notes app, one line per session: date, movement, weight, reps per set. Rule 3 is unusable without it — you will not remember Friday by the following Friday.</li>
+      <li><b>Weeks 1 and 2 stop well short of failure.</b> Concretely: <b>3 or 4 reps left in the tank on every set</b>, no vest, no adding weight, and if a rep range says 6–8, do 6. This is for your tendons, not your motivation, and it's the part everyone skips right before they get hurt. Week 3 is when you start pushing.</li>
+      <li><b>Weigh yourself once a week, same time, same conditions.</b> Not trending up over a month means eat more — an extra 300–400 calories a day, ideally something with protein in it. At 5'10" and 140 lb, undereating is the most likely reason this program fails. It's the only number you're tracking.</li>
+    </ol>
+  </section>
+
+  <!-- WHAT IF -->
+  <section class="pane card" id="whatif">
+    <h2>What if…</h2>
+    <div class="scroll"><table>
+      <tbody>
+        <tr><td><b>You can curl the 16 kg with one arm</b> for 8 clean reps</td><td>Do that instead, 8–10 per side, and treat two hands as the warm-up you've outgrown. Until then two hands is the honest version, not the easy one.</td></tr>
+        <tr><td style="width:34%"><b>You can press the 16 kg strict</b> — one arm, no help, 5 clean reps</td><td>Drop the helping hand. Same reps, same bell, same rest. That's the movement this version is building toward, and it's the moment to log the change.</td></tr>
+        <tr><td><b>You can't control the lowering</b> even with the help on the way up</td><td>Press with <b>two hands</b> and lower with two, 8–10 reps. Come back to one-arm lowering when a three-second descent stops feeling like a drop.</td></tr>
+        <tr><td><b>The bell is too light</b> — you get 9+ presses on week one</td><td>Work the ladder in rule 3 — slow the lowering, then add pauses. Don't buy a second bell before week 8.</td></tr>
+        <tr><td><b>You miss a day</b></td><td>Skip it. Don't shift the week and don't double up. The week is built around volleyball and climbing, so shifting it breaks the spacing that keeps your elbows intact.</td></tr>
+        <tr><td><b>You're sore</b></td><td>Train anyway, take longer rests. Soreness that eases as you warm up is fine.</td></tr>
+        <tr><td><b>Something hurts</b> — sharp, or worse the next morning</td><td>Stop that movement for the day. These are the ones to take seriously: tendon pain <b>higher the next morning</b> than before the session, morning stiffness lasting over 30 minutes, pain that rises during the warm-up instead of easing, and any tenderness or swelling over a finger pulley. That last one shows up 2–3 weeks before a pulley ruptures — stop climbing and get it looked at.</td></tr>
+        <tr><td><b>You're travelling</b></td><td>Push-ups feet-elevated on the bed, lateral and rear delt raises with a full water bottle in each hand, split-squat holds, and the doorframe and table holds — those need no equipment at all. That covers five of seven days without a single piece of gear.</td></tr>
+        <tr><td><b>You run out of time mid-session</b></td><td>Finish the set you're in and stop. Cut the last movement, never the first — the first one is the one that matters most that day.</td></tr>
+        <tr><td><b>It's week 9</b></td><td>Come back and we rebalance. Upper chest is the thinnest thing here at 4 sets a week, and it's the first thing I'd grow. That's also the point to decide on a heavier bell or taller parallettes.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- SHOPPING -->
+  <section class="pane card">
+    <h2>What to buy, in order</h2>
+    <ul class="buy">
+      <li><b>16 kg kettlebell</b> — presses, curls, extensions, swings.</li>
+      <li><b>Two dumbbells, 5–8 lb each</b> (not 5–8 lb for the pair — that was ambiguous in v1). Around $30. Laterals and rear delts only, and it's the only purchase that makes your shoulders <i>wider</i> rather than just stronger.</li>
+      <li><b>Nothing else until week 9.</b> Not taller parallettes, not a dip station, not a second bell.</li>
+    </ul>
+    <p class="ok"><b>Already covered:</b> your 20 lb vest, your parallettes at 2–3 inches (the right height for what they're used for here), a couch, and something around 12 inches to put your feet on. The pull-up bar isn't used in this program — you chose curls over chin-ups. It stays in the closet for now, and that was deliberate.</p>
+  </section>
+
+  <!-- TOTALS -->
+  <section class="pane card">
+    <h2>What this adds up to</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Muscle</th><th>Hard sets / week</th><th>From</th></tr></thead>
+      <tbody>
+        <tr><td>Front delt</td><td>6 press + 8 push-up</td><td>Mon, Wed, Fri, Sun</td></tr>
+        <tr><td>Side delt <span class="dim">— the width</span></td><td>10</td><td>Mon, Wed, Thu</td></tr>
+        <tr><td>Rear delt</td><td>7</td><td>Mon, Tue, Thu</td></tr>
+        <tr><td>Triceps</td><td>7 direct + 14 indirect</td><td>Tue, Fri, Sun, all pressing</td></tr>
+        <tr><td>Biceps</td><td>10</td><td>Tue, Fri, Sun</td></tr>
+        <tr><td>Upper chest</td><td>8</td><td>Wed, Sun</td></tr>
+        <tr><td>Glutes and hinge</td><td>2</td><td>Wed, Sun</td></tr>
+        <tr><td>Quads <span class="dim">— not counted above</span></td><td>3 holds + volleyball</td><td>Sat, plus jumping twice a week</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">The split-squat holds are tendon work, not size work, which is why they sat outside this table in v1. They're listed so the lower body isn't invisible. For scale: the best current estimate of the minimum needed to grow a muscle is about 4 sets a week, and the returns flatten hard somewhere past 20. Side delts at 10 and biceps at 10 are real, focused work. Delts are already near the top of the useful range, which is why v3 spent the freed day on chest and arms instead of adding more shoulder work.</p>
+  </section>
+
+  <!-- CHANGELOG -->
+  <section class="pane card">
+    <h2>What changed in v6</h2>
+    <p class="muted" style="margin:-.3rem 0 .9rem">From the first two sessions' logs, and from training with the phone in your hand.</p>
+    <ul class="chg">
+      <li><b>The press is helped up and lowered slowly, 5–6 reps.</b> Monday's log reads 6, 4, 4 at one rep in reserve, and you got those by kipping the bell with your core on a week the program had asked you to leave 3–4 in reserve. The 16 kg is above your strict one-arm press and below your one-arm lowering, so the set is now built on the half you can actually do: two hands up, one arm down over three seconds. Same bell, same day, and it's the fastest route to pressing it strict.</li>
+      <li><b>One-arm movements take one number per arm.</b> Reps and reps-in-reserve, left and right, logged separately and shown separately in the history. Your left is the weaker side and there was no way to see it in the data.</li>
+      <li><b>The screen stays on during a session,</b> and the clock keeps real time if the phone locks anyway. It used to freeze on the frame it went dark and pick up exactly there, so the session quietly drifted by however long the screen was off.</li>
+      <li><b>The countdown is spread over five seconds instead of three.</b> Same three ticks, same go tone, twice the room between them.</li>
+      <li><b>The volume slider stops at 20%.</b> At zero it was an app with no cues and nothing on screen to explain why.</li>
+    </ul>
+
+    <h2 style="margin-top:2rem">What changed in v5</h2>
+    <p class="muted" style="margin:-.3rem 0 .9rem">Everything here came out of the first session's log.</p>
+    <ul class="chg">
+      <li><b>Effort targets, shown during the set.</b> Session one ran push-ups 15, 15, 8, 6 and the overhead extension 12 then 3, finishing the deliberately easy day at zero reps in reserve. Nothing on screen said how hard to go, so every first set went near failure and the later sets paid for it. The timer now reads <i>stop 2–3 short of failure</i>, and the log sheet rings the reps-in-reserve buttons you were aiming for.</li>
+      <li><b>The first two weeks now actually hold you back.</b> The on-ramp was written down in v1 and never implemented — it changed nothing you could see. It now sets the effort target to 3–4 in reserve for fourteen days.</li>
+      <li><b>Sunday's ranges narrowed: push-ups 10–12, extension 8–10.</b> A range of 8–15 on a 60-second rest is an invitation to burn the first two sets. Flat targets, same number on the fourth set as the first.</li>
+      <li><b>A finished session is stored as finished.</b> Tapping Done overwrote the completion flag it had just set, so no session could ever be marked complete and every day showed as partial on the calendar. Found in the session-one export.</li>
+      <li><b>The rep counter opens on what you did last time,</b> instead of a fixed default, so most sets are one tap.</li>
+    </ul>
+
+    <h2 style="margin-top:2rem">What changed in v4</h2>
+    <ul class="chg">
+      <li><b>Curls are two-handed now, 12–15 reps.</b> One arm on a 16 kg bell was the wrong starting weight — and the 45-second work window never had room for two separate sides anyway, which made the old prescription impossible to run as written. One arm at 8–10 is now the progression target, not the entry point.</li>
+      <li><b>The cue sounds are loud enough to hear over music.</b> Same tones you picked, same pitches, roughly eleven times the level. There is a volume slider in Progress that goes to 200%, with a Test button.</li>
+      <li><b>Every set says which one it is.</b> "Set 2 of 4" on the timer screen and in Up next, so you don't have to know the day by heart.</li>
+    </ul>
+
+    <h2 style="margin-top:2rem">What changed in v3</h2>
+    <ul class="chg">
+      <li><b>Sunday is no longer a tendon day.</b> It's chest and arms now, held at 2–3 reps short of failure. Climbing already loads the elbow hard every Thursday, so the elbow isometrics were redundant against it. They stay documented as the treatment if an elbow does flare.</li>
+      <li><b>One tendon day, not two.</b> Saturday keeps the shoulder and knee work, which maps to the two injuries that would actually stop the program: a shoulder ends the training, a knee ends indoor volleyball.</li>
+      <li><b>Chest doubled, 4 sets to 8. Biceps 7 to 10.</b> Delts untouched at 23 — they were already past the point where more sets buy anything.</li>
+      <li><b>Still no rest day.</b> Sunday's short rests and low effort are the recovery; the daily slot is what keeps the habit from needing a decision.</li>
+    </ul>
+
+    <h2 style="margin-top:2rem">What changed from v1</h2>
+    <ul class="chg">
+      <li><b>Rest periods added everywhere.</b> They were missing entirely, which made every session's real length unknowable.</li>
+      <li><b>Monday's press cut from 4 sets to 3.</b> Timed with rest, the old version ran past 15 minutes. The doc claimed otherwise.</li>
+      <li><b>Tendon days rebuilt and split.</b> The old version was 22+ minutes of holds before the split squats even started.</li>
+      <li><b>Tendon holds now push against furniture instead of holding the bell.</b> Clearer to execute and it actually reaches the effort level tendons need.</li>
+      <li><b>Thursday no longer says "go to failure."</b> It contradicted rule 2.</li>
+      <li><b>Every movement now has a written description.</b> The old version needed roughly eight YouTube searches to start.</li>
+      <li><b>"5 × 4 × 3 sec" replaced</b> with something readable.</li>
+      <li><b>Rule 5 now says what "60%" means</b> in reps, and rule 2 says when the failure rule switches on.</li>
+      <li><b>Push-ups got a rep range</b> (8–15). "2 short of failure" with no range left the session length undefined.</li>
+      <li><b>Fallbacks added</b> for the bell being too heavy or too light, plus rules for missed days, travel, soreness, and pain.</li>
+      <li><b>Dumbbell weight disambiguated</b> — 5–8 lb each, not for the pair.</li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>
