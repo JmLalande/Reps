@@ -1,13 +1,14 @@
 "use strict";
 /* ---------------------------------------------------------------- storage */
-const DB_NAME="reps-tracker", DB_VER=1;
+const DB_NAME="reps-tracker", DB_VER=2;
 let db=null;
 function open(){return new Promise((res,rej)=>{
   const r=indexedDB.open(DB_NAME,DB_VER);
   r.onupgradeneeded=e=>{const d=e.target.result;
     if(!d.objectStoreNames.contains("sessions"))d.createObjectStore("sessions",{keyPath:"date"});
     if(!d.objectStoreNames.contains("meta"))d.createObjectStore("meta",{keyPath:"k"});
-    if(!d.objectStoreNames.contains("weights"))d.createObjectStore("weights",{keyPath:"date"});};
+    if(!d.objectStoreNames.contains("weights"))d.createObjectStore("weights",{keyPath:"date"});
+    if(!d.objectStoreNames.contains("freezes"))d.createObjectStore("freezes",{keyPath:"date"});};
   r.onsuccess=e=>{db=e.target.result;res();};r.onerror=()=>rej(r.error);});}
 function tx(store,mode){return db.transaction(store,mode).objectStore(store);}
 function put(store,val){return new Promise((res,rej)=>{const q=tx(store,"readwrite").put(val);
@@ -20,7 +21,7 @@ function del(store,key){return new Promise((res,rej)=>{const q=tx(store,"readwri
   q.onsuccess=()=>res();q.onerror=()=>rej(q.error);});}
 
 /* ------------------------------------------------------------------ state */
-let SESSIONS={}, META={k:"app",poolSeen:[],lastBreak:-1,sound:true,vol:1,firstDay:null,lastStreak:0,facts:null}, WEIGHTS=[];
+let SESSIONS={}, META={k:"app",poolSeen:[],lastBreak:-1,sound:true,vol:1,firstDay:null,lastStreak:0,facts:null}, WEIGHTS=[], FREEZES={};
 const $=id=>document.getElementById(id);
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 /* The day ends at 4 in the morning, not at midnight. A session at 2am after a
@@ -44,16 +45,53 @@ const upn=s=>clock(s,Math.floor);
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v26";
+const APP_VERSION="v27";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
 const setCount=a=>new Set((a||[]).map(x=>x.m+"#"+x.set)).size;
+/* A day holds the chain if you trained or if you froze. Only training counts
+   toward the number on screen, so the streak reads as sessions done and the
+   milestone keyed to it stays true. */
+const held=k=>qualifies(SESSIONS[k])||!!FREEZES[k];
 function computeStreak(){
   let n=0,d=appNow();
-  if(!qualifies(SESSIONS[iso(d)]))d.setDate(d.getDate()-1);
-  while(qualifies(SESSIONS[iso(d)])){n++;d.setDate(d.getDate()-1);}
+  if(!held(iso(d)))d.setDate(d.getDate()-1);
+  while(held(iso(d))){if(qualifies(SESSIONS[iso(d)]))n++;d.setDate(d.getDate()-1);}
   return n;
+}
+
+/* The budget is derived from the dates, never stored. The Monday of the week a
+   day falls in names that week, so a freeze always bills the week it sits in. */
+function weekOf(k){const d=new Date(k+"T12:00:00");d.setDate(d.getDate()-(d.getDay()+6)%7);return iso(d);}
+const freezesIn=w=>Object.keys(FREEZES).filter(k=>weekOf(k)===w).length;
+const freezesLeft=()=>Math.max(0,FREEZES_PER_WEEK-freezesIn(weekOf(todayISO())));
+
+/* The days between the last day you held and yesterday. Today is never in here:
+   today is not missed until it is over. The longest gap that can ever be covered
+   is the tail of one week and the head of the next. */
+function openGap(){
+  if(!Object.values(SESSIONS).some(qualifies))return [];
+  const gap=[],d=appNow();d.setDate(d.getDate()-1);
+  while(gap.length<=2*FREEZES_PER_WEEK&&!held(iso(d))){gap.push(iso(d));d.setDate(d.getDate()-1);}
+  return held(iso(d))?gap:null;   /* null means the gap runs off the end, too long to cover */
+}
+async function spendFreeze(date,auto){
+  const rec={date,auto:!!auto};
+  FREEZES[date]=rec;await put("freezes",rec);
+}
+/* Nothing runs at midnight in a page that is closed, so a missed day is only
+   found when you open the app again. Cover the whole gap or none of it, each
+   day out of its own week's budget. Half a gap covered still breaks the streak
+   and burns a freeze you could have used later. */
+async function autoCover(){
+  const gap=openGap();
+  if(!gap||!gap.length)return 0;
+  const need={};
+  for(const k of gap)need[weekOf(k)]=(need[weekOf(k)]||0)+1;
+  if(Object.keys(need).some(w=>need[w]>FREEZES_PER_WEEK-freezesIn(w)))return 0;
+  for(const k of gap)await spendFreeze(k,true);
+  return gap.length;
 }
 function daysSinceStart(){
   if(!META.firstDay)return 0;
@@ -158,6 +196,8 @@ function renderToday(){
     ec.style.display="block";ec.textContent="Edit today, "+n+(n===1?" set":" sets");}
   else ec.style.display="none";
 
+  renderFreeze();
+
   $("planList").innerHTML=day.blocks.map((b,i)=>{
     const m=M[b.m];
     return "<li><span class='n'>"+(i+1)+"</span><span class='nm'>"+m.name+"</span><span class='s'>"+
@@ -179,6 +219,38 @@ function renderRoutine(){
   }).join("");
 }
 
+/* ----------------------------------------------------------------- freeze */
+function renderFreeze(){
+  const left=freezesLeft(), today=todayISO(), frozen=!!FREEZES[today],
+        trained=qualifies(SESSIONS[today]), btn=$("freezeBtn"), note=$("freezeNote"),
+        /* The snowflake is markup inside the button, so the label is its own
+           element. Writing to the button would delete the icon. */
+        lbl=$("freezeLbl");
+  note.textContent=(left?left+(left===1?" freeze":" freezes"):"No freeze")+" left this week · resets Monday";
+  if(frozen){
+    btn.style.display="flex";lbl.textContent="Today is frozen · undo";
+    btn.classList.add("on");btn.disabled=false;
+  }else if(trained){
+    btn.style.display="none";
+  }else{
+    btn.style.display="flex";lbl.textContent=left?"Freeze today":"No freeze left";
+    btn.classList.remove("on");btn.disabled=!left;
+  }
+}
+async function toggleFreeze(){
+  const today=todayISO();
+  if(FREEZES[today]){
+    delete FREEZES[today];await del("freezes",today);
+    toast("Freeze returned");
+  }else{
+    if(!freezesLeft())return;
+    await spendFreeze(today,false);
+    toast("Today is frozen. Tomorrow is "+WEEK[(appNow().getDay()+1)%7].name+".");
+  }
+  META.lastStreak=computeStreak();await put("meta",META);
+  renderToday();renderHistory();renderStats();
+}
+
 /* ---------------------------------------------------------------- history */
 let calCursor=new Date();
 function renderHistory(){
@@ -192,6 +264,7 @@ function renderHistory(){
     const future=new Date(y,mo,d)>appNow();
     let cls="c";
     if(s&&s.complete)cls+=" done"; else if(qualifies(s))cls+=" part";
+    else if(FREEZES[key])cls+=" frz";
     else if(!future&&META.firstDay&&key>=META.firstDay)cls+=" miss";
     if(future)cls+=" future";
     if(key===todayISO())cls+=" today";
@@ -629,6 +702,9 @@ async function saveSession(complete,actual){
     plannedSec:PLANNED,actualSec:actual||null,activeSec:activeSoFar(),
     sets:logged.slice(),complete:!!complete};
   SESSIONS[date]=rec;
+  /* Froze this morning and trained anyway. Refund it rather than charge you
+     for a day you showed up for. */
+  if(FREEZES[date]){delete FREEZES[date];await del("freezes",date);}
   if(!META.firstDay){META.firstDay=date;}
   const st=computeStreak();
   if(st===0&&META.lastStreak>1){META.lastBreak=breakMessage(META.lastBreak).index;}
@@ -769,6 +845,7 @@ $("quitBtn").addEventListener("click",pauseSession);
 $("doneBtn").addEventListener("click",leaveSession);
 $("startBtn").addEventListener("click",startSession);
 $("editToday").addEventListener("click",()=>openEditor(todayISO()));
+$("freezeBtn").addEventListener("click",toggleFreeze);
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("on"));
@@ -785,11 +862,21 @@ $("wtSave").addEventListener("click",async()=>{
   WEIGHTS=WEIGHTS.filter(x=>x.date!==rec.date);WEIGHTS.push(rec);
   $("wtIn").value="";renderStats();toast("Saved");
 });
-const dump=()=>JSON.stringify({sessions:Object.values(SESSIONS),meta:META,weights:WEIGHTS},null,2);
-$("expBtn").addEventListener("click",()=>{
+/* Both exports go through the same JSON download, so the weigh-ins land in
+   Downloads exactly the way the full backup does, with nothing opened. */
+function saveJSON(name,data){
   const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([dump()],{type:"application/json"}));
-  a.download="reps-"+todayISO()+".json";a.click();URL.revokeObjectURL(a.href);
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));
+  a.download=name+"-"+todayISO()+".json";a.click();URL.revokeObjectURL(a.href);
+}
+const backup=()=>({sessions:Object.values(SESSIONS),meta:META,weights:WEIGHTS,freezes:Object.values(FREEZES)});
+const dump=()=>JSON.stringify(backup(),null,2);
+$("expBtn").addEventListener("click",()=>saveJSON("reps",backup()));
+/* Bodyweight alone, oldest first. Import reads it too and adds the weigh-ins
+   without touching anything else. */
+$("wtExp").addEventListener("click",()=>{
+  if(!WEIGHTS.length){toast("No weigh-ins yet");return;}
+  saveJSON("reps-weigh-ins",{weights:WEIGHTS.slice().sort((a,b)=>a.date.localeCompare(b.date))});
 });
 /* Reading the clipboard needs a permission Android quietly refuses inside an
    installed app, and it fails silently. A box you paste into always works. */
@@ -832,20 +919,21 @@ $("impFile").addEventListener("change",async e=>{
 });
 
 async function ingest(d){
-  if(!d||!Array.isArray(d.sessions))throw new Error("not an export");
-  for(const s of d.sessions)await put("sessions",s);
+  if(!d||!(Array.isArray(d.sessions)||Array.isArray(d.weights)))throw new Error("not an export");
+  for(const s of (d.sessions||[]))await put("sessions",s);
   for(const w of (d.weights||[]))await put("weights",w);
+  for(const f of (d.freezes||[]))await put("freezes",f);
   if(d.meta){META=Object.assign(META,d.meta,{k:"app"});await put("meta",META);}
   await load();
 }
 async function load(){
   const s=await all("sessions");SESSIONS={};s.forEach(x=>SESSIONS[x.date]=x);
   const m=await get("meta","app");if(m)META=Object.assign(META,m);
+  const fz=await all("freezes");FREEZES={};fz.forEach(x=>FREEZES[x.date]=x);
   /* Sessions saved before the 4am rollover carry the calendar date they were
      started on. One started before 4 moves back to the evening it belongs to,
      unless that evening already holds a different session. The same session
      arriving twice, from an old export pasted in again, collapses into one. */
-  let moved=false;
   for(const x of Object.values(SESSIONS)){
     if(!x.startedAt)continue;
     const st=new Date(x.startedAt);
@@ -855,9 +943,8 @@ async function load(){
     if(there&&there.startedAt!==x.startedAt)continue;
     const old=x.date;
     x.date=prev;await put("sessions",x);await del("sessions",old);
-    delete SESSIONS[old];SESSIONS[prev]=x;moved=true;
+    delete SESSIONS[old];SESSIONS[prev]=x;
   }
-  if(moved){META.lastStreak=computeStreak();await put("meta",META);}
   sound=META.sound!==false;
   $("sndBtn").setAttribute("aria-pressed",sound?"true":"false");
   $("sndToggle").textContent=sound?"Cues on":"Cues off";
@@ -866,8 +953,13 @@ async function load(){
   VOL=(typeof META.vol==="number"&&META.vol>=.2)?META.vol:1;
   $("volIn").value=Math.round(VOL*100);$("volNote").textContent=Math.round(VOL*100)+"%";
   WEIGHTS=await all("weights");
+  /* Before the first render, or you see a broken streak that the freeze you
+     are owed was about to save. */
+  const covered=await autoCover();
+  META.lastStreak=computeStreak();await put("meta",META);
   $("verNote").textContent=APP_VERSION;
   renderToday();renderRoutine();renderHistory();renderStats();
+  if(covered)toast(covered===1?"A freeze covered yesterday":covered+" freezes covered the days you missed");
 }
 open().then(load).catch(()=>{toast("This browser will not let the app save anything");renderToday();renderRoutine();});
 if("serviceWorker" in navigator)addEventListener("load",async()=>{

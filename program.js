@@ -59,6 +59,11 @@ const WEEK = {
   0: {name:"Push & delts", rir:[1,2], blocks:[{m:"pushup",sets:5,rest:65},{m:"lateral",sets:3,rest:45},{m:"reardelt",sets:3,rest:40}]}
 };
 
+/* One freeze a week, Monday to Sunday, no carryover. A frozen day holds the
+   streak and skips that day's workout. Nothing slides: the week is keyed to the
+   calendar, so the day after a freeze is still that day's workout. */
+const FREEZES_PER_WEEK = 1;
+
 /* Weeks 1–2 hold you back on purpose: 3–4 reps in reserve, no vest, no progression. */
 const ONRAMP_DAYS = 14;
 
