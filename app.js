@@ -45,7 +45,7 @@ const upn=s=>clock(s,Math.floor);
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v28";
+const APP_VERSION="v29";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -274,55 +274,236 @@ function renderHistory(){
 }
 
 /* ------------------------------------------------------------------ stats */
+/* What people come back to in a progress screen is proof they kept at it:
+   totals that only grow, weeks held, last month in a few facts. Analysis is
+   kept to charts that answer one question at a glance. Records were dropped:
+   with fixed bells the load never moves, so a record is one lucky day. */
+const WEEK_OK=4, CAL_WEEKS=5, REPS_SHOWN=4;
+const MILES=[100,250,500,750,1000,1500,2000,2500,3000,4000,5000,7500,10000];
+const nextMile=t=>MILES.find(x=>x>t)||Math.ceil((t+1)/5000)*5000;
+const prevMile=t=>[0,...MILES].filter(x=>x<=t).pop();
+const dOf=k=>new Date(k+"T12:00:00");
+const addD=(k,n)=>{const d=dOf(k);d.setDate(d.getDate()+n);return iso(d);};
+const gapD=(a,b)=>Math.round((dOf(b)-dOf(a))/864e5);
+const fmtD=k=>dOf(k).toLocaleDateString("en-CA",{month:"short",day:"numeric"});
+const monthOf=(k,len)=>dOf(k).toLocaleDateString("en-CA",{month:len||"long"});
+const hmin=sec=>{const m=Math.round(sec/60);return m>=60?Math.floor(m/60)+"h"+String(m%60).padStart(2,"0"):m+" min";};
+const nth=n=>n+(n%100>=11&&n%100<=13?"th":["th","st","nd","rd"][n%10]||"th");
+const repsIn=(ss,m)=>ss.reduce((a,s)=>a+(s.sets||[]).filter(x=>!m||x.m===m).reduce((b,x)=>b+(x.reps||0),0),0);
+const secsIn=ss=>ss.reduce((a,s)=>a+(s.actualSec||0),0);
+const DAYS_PL=["Sundays","Mondays","Tuesdays","Wednesdays","Thursdays","Fridays","Saturdays"];
+const SVG_FONT='font-family="Geist, system-ui, sans-serif"';
+let HOURS=new Array(24).fill(0);
+
 function renderStats(){
-  const prs=Object.keys(M).map(k=>({k,pr:prFor(k)})).filter(x=>x.pr);
-  $("prs").innerHTML=prs.length?prs.map(x=>"<div class='stat'><span>"+M[x.k].name+
-    "<br><span class='muted'>"+new Date(x.pr.date+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})+"</span></span>"+
-    "<span class='v mono'>"+x.pr.reps+" <small>"+(M[x.k].hold?"s":"reps")+"</small></span></div>").join("")
-    :"<p class='muted'>Log a few sets and your best ones show up here.</p>";
-
-  /* then and now */
-  const cut=iso(new Date(Date.now()-60*864e5));
-  const lines=[];
-  Object.keys(M).forEach(k=>{
-    const olds=[],news=[];
-    Object.values(SESSIONS).forEach(s=>(s.sets||[]).forEach(x=>{
-      if(x.m!==k)return;(s.date<cut?olds:news).push(x.reps);}));
-    if(olds.length>=2&&news.length>=2){
-      const a=Math.max(...olds), b=Math.max(...news);
-      if(b!==a)lines.push("<div class='stat'><span>"+M[k].name+"</span><span class='v mono'>"+a+" → "+b+"</span></div>");
-    }
-  });
-  if(lines.length){$("retroCard").style.display="block";
-    $("retro").innerHTML="<p class='muted' style='margin-bottom:8px'>Your best set two months ago, against your best set now.</p>"+lines.join("");}
-  else $("retroCard").style.display="none";
-
-  /* hours */
-  const hours=new Array(24).fill(0);
-  Object.values(SESSIONS).forEach(s=>{if(s.startedAt)hours[new Date(s.startedAt).getHours()]++;});
-  const mx=Math.max(1,...hours);
-  $("hourBars").innerHTML=hours.map(v=>"<i style='height:"+Math.max(2,(v/mx)*100)+"%;opacity:"+(v?0.9:0.12)+"'></i>").join("");
-  const busiest=hours.indexOf(Math.max(...hours));
-  $("hourNote").textContent=Object.keys(SESSIONS).length?"You train most often around "+String(busiest).padStart(2,"0")+":00.":"";
-
-  /* length */
-  const ls=Object.values(SESSIONS).filter(s=>s.actualSec).sort((a,b)=>a.date.localeCompare(b.date)).slice(-30);
-  const lmx=Math.max(900,...ls.map(s=>s.actualSec));
-  $("lenSpark").innerHTML=ls.map(s=>"<i style='height:"+(s.actualSec/lmx*100)+"%;background:"+
-    (s.actualSec>960?"var(--amber)":"var(--teal)")+"'></i>").join("");
-  if(ls.length){const avg=ls.reduce((a,s)=>a+s.actualSec,0)/ls.length;
-    $("lenNote").textContent="Average "+fmt(avg)+" over your last "+ls.length+" sessions.";}
-  else $("lenNote").textContent="";
-
-  /* weight */
-  const w=WEIGHTS.slice().sort((a,b)=>a.date.localeCompare(b.date)).slice(-26);
-  if(w.length){
-    const lo=Math.min(...w.map(x=>x.w)), hi=Math.max(...w.map(x=>x.w)), span=Math.max(1,hi-lo);
-    $("wtSpark").innerHTML=w.map(x=>"<i style='height:"+(12+((x.w-lo)/span)*88)+"%'></i>").join("");
-    const first=w[0].w,last=w[w.length-1].w,dd=(last-first).toFixed(1);
-    $("wtNote").textContent=last+" lb today. "+(dd>0?"Up ":(dd<0?"Down ":"Level, "))+(dd!=0?Math.abs(dd)+" lb ":"")+"across "+w.length+" weigh-ins.";
-  }else{$("wtSpark").innerHTML="";$("wtNote").textContent="No entries yet.";}
+  const S=Object.values(SESSIONS).filter(qualifies).sort((a,b)=>a.date.localeCompare(b.date));
+  const today=todayISO(), any=S.length>0;
+  ["pgWeeks","pgHourCard","pgLenCard","pgRepsCard"].forEach(id=>$(id).hidden=!any);
+  if(!any){
+    $("pgSay").textContent="Your first session starts the count.";
+    $("pgLife").innerHTML="";$("pgRecap").hidden=true;$("pgCmpCard").hidden=true;
+  }else{
+    statsHead(S,today);statsRecap(S,today);statsWeeks(S,today);statsMonth(S,today);
+    statsHours(S);statsLength(S);statsReps(S);
+  }
+  statsWeight();
 }
+
+/* Weeks start Monday. A held day is trained or frozen, same as the streak. */
+function statsWeekList(S,today){
+  const out=[];
+  for(let w=weekOf(S[0].date);w<=weekOf(today);w=addD(w,7))
+    out.push({w,n:[0,1,2,3,4,5,6].filter(i=>held(addD(w,i))).length,live:w===weekOf(today)});
+  let best=0,run=0;
+  out.forEach((k,i)=>{
+    if(k.n>=WEEK_OK){run++;best=Math.max(best,run);}
+    else if(!k.live&&i>0)run=0;   /* the first, partial week and the live one never break it */
+  });
+  return {weeks:out,cur:run,best};
+}
+
+/* One sentence on what changed lately, and the totals that only grow. */
+function statsHead(S,today){
+  let back=null;
+  for(let i=1;i<S.length;i++)if(gapD(S[i-1].date,S[i].date)>=7)back={from:S[i].date,off:gapD(S[i-1].date,S[i].date)-1};
+  const {cur}=statsWeekList(S,today);
+  let line;
+  if(back&&gapD(back.from,today)<=28){const n=S.filter(s=>s.date>=back.from).length;
+    line="Back at it: <em>"+n+" session"+(n===1?"":"s")+"</em> since "+fmtD(back.from)+", after "+back.off+" days off.";}
+  else if(cur>=2)line="<em>"+cur+" weeks in a row</em> at "+WEEK_OK+"+ days.";
+  else{const n=S.filter(s=>s.date>addD(today,-30)).length;line="<em>"+n+" session"+(n===1?"":"s")+"</em> in the last 30 days.";}
+  $("pgSay").innerHTML=line;
+  $("pgLife").innerHTML="<div><b>"+S.length+"</b><span>sessions</span></div><div><b>"+hmin(secsIn(S))+"</b><span>trained</span></div><div><b>"+repsIn(S).toLocaleString("en-CA")+"</b><span>reps</span></div>";
+}
+
+/* Last full month in a few facts: the card worth a screenshot. */
+function statsRecap(S,today){
+  const d0=dOf(today);d0.setDate(1);d0.setMonth(d0.getMonth()-1);const ym=iso(d0).slice(0,7);
+  const MS=S.filter(s=>s.date.startsWith(ym));
+  $("pgRecap").hidden=!MS.length;if(!MS.length)return;
+  let longest=0,r=0,prev=null;
+  MS.forEach(s=>{r=prev&&gapD(prev,s.date)===1?r+1:1;longest=Math.max(longest,r);prev=s.date;});
+  const dow=[0,0,0,0,0,0,0];MS.forEach(s=>dow[dOf(s.date).getDay()]++);
+  const hrs=new Array(24).fill(0);MS.forEach(s=>{if(s.startedAt)hrs[new Date(s.startedAt).getHours()]++;});
+  const per={};MS.forEach(s=>(s.sets||[]).forEach(x=>{if(M[x.m])per[x.m]=(per[x.m]||0)+(x.reps||0);}));
+  const top=Object.entries(per).sort((a,b)=>b[1]-a[1])[0];
+  $("pgRecap").innerHTML="<span class='kick'>Last month</span><h2>"+monthOf(ym+"-15")+", in Reps</h2><div class='facts'>"+
+    "<div><span>Sessions</span><b>"+MS.length+"</b></div>"+
+    "<div><span>Trained</span><b>"+hmin(secsIn(MS))+"</b></div>"+
+    "<div><span>Reps</span><b>"+repsIn(MS).toLocaleString("en-CA")+"</b></div>"+
+    "<div><span>Longest run</span><b>"+longest+(longest===1?" day":" days")+"</b></div>"+
+    (hrs.some(Boolean)?"<div><span>Usual start</span><b>"+hrs.indexOf(Math.max(...hrs))+":00</b></div>":"")+
+    "<div><span>Most loyal</span><b>"+DAYS_PL[dow.indexOf(Math.max(...dow))]+"</b></div>"+
+    (top?"<div class='wide'><span>Most reps</span><b>"+top[1].toLocaleString("en-CA")+" · "+(M[top[0]].short||M[top[0]].name)+"</b></div>":"")+
+    "</div>";
+}
+
+/* The last few weeks, day by day, and how many weeks in a row held. */
+function statsWeeks(S,today){
+  const {weeks,cur,best}=statsWeekList(S,today);
+  $("pgStreak").innerHTML="<b>"+cur+"</b> in a row · best <b>"+best+"</b>";
+  let h="MTWTFSS".split("").map(c=>"<span class='h'>"+c+"</span>").join("")+"<span></span>";
+  weeks.slice(-CAL_WEEKS).forEach(k=>{
+    for(let i=0;i<7;i++){
+      const d=addD(k.w,i),s=SESSIONS[d],on=qualifies(s),frz=!on&&!!FREEZES[d];
+      const cls=d>today?"fut":on?"on":frz?"frz":"";
+      const at=on&&s.startedAt?new Date(s.startedAt).toLocaleTimeString("en-CA",{hour:"2-digit",minute:"2-digit",hour12:false})+" · ":"";
+      const tip=on?fmtD(d)+" · "+at+fmt(s.actualSec||0)+" · "+repsIn([s])+" reps":fmtD(d)+" · "+(d>today?"ahead":frz?"frozen":"no session");
+      h+="<button class='d "+cls+(d===today?" today":"")+"' data-read='ro-cal' data-tip='"+tip+"' aria-label='"+tip+"'>"+dOf(d).getDate()+"</button>";
+    }
+    h+="<span class='n"+(k.n>=WEEK_OK?" ok":"")+"'>"+(k.live&&!k.n?"":k.n)+"</span>";
+  });
+  $("pgCal").innerHTML=h;
+}
+
+/* This month against last month, as a running count of sessions. */
+function statsMonth(S,today){
+  const thisM=today.slice(0,7),d0=dOf(today);d0.setDate(1);d0.setMonth(d0.getMonth()-1);
+  const lastM=iso(d0).slice(0,7),dom=+today.slice(8);
+  const has=new Set(S.map(s=>s.date));
+  const run=(ym,upto)=>{let c=0;const out=[[0,0]];for(let i=1;i<=upto;i++){if(has.has(ym+"-"+String(i).padStart(2,"0")))c++;out.push([i,c]);}return out;};
+  const lastLen=new Date(+lastM.slice(0,4),+lastM.slice(5),0).getDate();
+  const A=run(thisM,dom),B=run(lastM,lastLen);
+  const a=A[A.length-1][1],b=B[B.length-1][1],bAt=B[Math.min(dom,lastLen)][1];
+  $("pgCmpCard").hidden=!a&&!b;if(!a&&!b)return;
+  const w=388,h=96,padR=58,mx=Math.max(4,a,b);
+  const X=i=>i/31*(w-padR),Y=v=>h-4-v/mx*(h-12),path=p=>p.map(([i,v])=>X(i)+","+Y(v)).join(" ");
+  const lastName=monthOf(lastM+"-15");
+  $("pgCmpH").textContent=monthOf(today)+" vs "+lastName;
+  $("pgCmpLead").innerHTML="<b>"+a+"</b> session"+(a===1?"":"s")+" so far. "+lastName+" had <b>"+bAt+"</b> by the "+nth(dom)+".";
+  $("pgCmp").innerHTML="<svg viewBox='0 0 "+w+" "+h+"' role='img' aria-label='Sessions: "+a+" this month, "+bAt+" last month by the same day'>"+
+    "<line x1='"+X(dom)+"' x2='"+X(dom)+"' y1='0' y2='"+h+"' stroke='rgba(255,255,255,.12)' stroke-dasharray='3 3'/>"+
+    "<polyline points='"+path(B)+"' fill='none' stroke='var(--dim)' stroke-width='2' stroke-linejoin='round' opacity='.7'/>"+
+    "<polyline points='"+path(A)+"' fill='none' stroke='var(--acc)' stroke-width='2.5' stroke-linejoin='round'/>"+
+    "<circle cx='"+X(dom)+"' cy='"+Y(a)+"' r='4' fill='var(--acc)' stroke='#121315' stroke-width='2'/>"+
+    "<text x='"+(X(lastLen)+8)+"' y='"+(Y(b)+4)+"' font-size='12' fill='#8A8F95' "+SVG_FONT+">"+monthOf(lastM+"-15","short")+" "+b+"</text>"+
+    "<text x='"+(X(dom)+8)+"' y='"+(Y(a)+4)+"' font-size='12' fill='#FF8A4C' "+SVG_FONT+">"+monthOf(today,"short")+" "+a+"</text></svg>";
+}
+
+/* 24 hours on one strip, brighter where you start more often. */
+function statsHours(S){
+  HOURS=new Array(24).fill(0);S.forEach(s=>{if(s.startedAt)HOURS[new Date(s.startedAt).getHours()]++;});
+  const mx=Math.max(1,...HOURS);
+  $("pgHours").innerHTML=HOURS.map(v=>"<i style='background:rgba(255,138,76,"+(v?.15+.85*v/mx:.05)+")'></i>").join("");
+  $("pgHours").setAttribute("aria-label","Sessions by start hour: "+HOURS.map((v,i)=>v?i+":00 "+v:"").filter(Boolean).join(", "));
+  $("pgHax").innerHTML=[0,6,12,18,24].map(h=>"<span style='left:"+(h/24*100)+"%;"+(h===0?"transform:none":h===24?"transform:translateX(-100%)":"")+"'>"+h+":00</span>").join("");
+  /* Two habits, not one hour: name the two biggest parts of the day. */
+  const parts=[["mornings",5,12],["afternoons",12,17],["evenings",17,24],["nights",0,5]]
+    .map(([n,a,b])=>({n,v:HOURS.slice(a,b).reduce((x,y)=>x+y,0)})).sort((x,y)=>y.v-x.v);
+  $("pgHourLead").innerHTML=parts.slice(0,2).filter(p=>p.v).map(p=>"<b>"+p.v+"</b> "+p.n).join(" · ");
+}
+/* The whole strip is one target: a tap picks the nearest hour, so thin cells never miss. */
+$("pgHours").addEventListener("pointerdown",e=>{
+  const r=$("pgHours").getBoundingClientRect(),i=Math.min(23,Math.max(0,Math.floor((e.clientX-r.left)/r.width*24)));
+  const ro=$("ro-h");ro.textContent=i+":00–"+(i+1)+":00 · "+HOURS[i]+" session"+(HOURS[i]===1?"":"s");ro.classList.add("on");
+});
+
+/* Session length by weekday, against the average of the weekday averages,
+   so a day you train more often does not weigh more. */
+function statsLength(S){
+  const ls=S.filter(s=>s.actualSec),order=[1,2,3,4,5,6,0],lbl=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  if(!ls.length){$("pgLenCard").hidden=true;return;}
+  const by=order.map(dk=>{const xs=ls.filter(s=>dOf(s.date).getDay()===dk);return {dk,n:xs.length,avg:xs.length?secsIn(xs)/xs.length:0};});
+  const mx=Math.max(...by.map(b=>b.avg)),days=by.filter(b=>b.n),avg=days.reduce((a,b)=>a+b.avg,0)/days.length;
+  $("pgLenLead").innerHTML="<i class='avgk'></i><b>"+fmt(avg)+"</b> average";
+  $("pgLen").innerHTML=by.map(b=>"<button data-read='ro-len' data-tip='"+DAYS_PL[b.dk]+" · "+(b.n?fmt(b.avg)+" average over "+b.n+" session"+(b.n===1?"":"s"):"no session yet")+"'>"+
+    "<i style='height:"+(b.avg/mx*62)+"px'><em>"+(b.n?Math.round(b.avg/60)+"m":"")+"</em></i><span>"+lbl[b.dk]+"</span></button>").join("")+
+    "<div class='avgl' style='bottom:"+(20+avg/mx*62)+"px' aria-hidden='true'></div>";
+}
+
+/* Bodyweight as a smoothed trend. Each weigh-in pulls the trend 10% of the way
+   per day elapsed (the Hacker's Diet method), so one salty dinner barely shows. */
+function statsWeight(){
+  const W=WEIGHTS.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  $("wtExp").hidden=!W.length;
+  if(!W.length){$("pgBw").innerHTML="<p class='muted'>Weigh in from the home screen and your trend shows up here.</p>";$("pgBwLead").textContent="";$("ro-bw").textContent="";return;}
+  const tr=[];W.forEach((p,i)=>{if(!i){tr.push(p.w);return;}const k=1-Math.pow(.9,Math.max(1,gapD(W[i-1].date,p.date)));tr.push(tr[i-1]+k*(p.w-tr[i-1]));});
+  const w=388,h=104,pl=30,pad=10,t0=dOf(W[0].date).getTime(),t1=dOf(W[W.length-1].date).getTime();
+  const lo=Math.floor(Math.min(...W.map(x=>x.w))),hi=Math.ceil(Math.max(...W.map(x=>x.w)));
+  const X=d=>pl+(dOf(d).getTime()-t0)/Math.max(1,t1-t0)*(w-pl-pad),Y=v=>h-pad-(v-lo)/Math.max(1,hi-lo)*(h-2*pad);
+  const pts=W.map((p,i)=>[X(p.date),Y(tr[i]),p.date]);
+  /* More than a week between weigh-ins: a dashed bridge instead of a curve. */
+  const segs=[[pts[0]]];for(let i=1;i<pts.length;i++){if(gapD(pts[i-1][2],pts[i][2])>7)segs.push([]);segs[segs.length-1].push(pts[i]);}
+  const curves=segs.filter(s=>s.length>1).map(s=>"<path d='"+monoPath(s)+"' fill='none' stroke='var(--acc)' stroke-width='2.5' stroke-linecap='round'/>").join("");
+  const bridges=segs.slice(1).map((s,i)=>{const a=segs[i][segs[i].length-1],b=s[0];
+    return "<line x1='"+a[0]+"' y1='"+a[1]+"' x2='"+b[0]+"' y2='"+b[1]+"' stroke='var(--acc)' stroke-width='2' stroke-dasharray='2 5' stroke-linecap='round' opacity='.55'/>";}).join("");
+  let grid="";const step=hi-lo>8?2:1;
+  for(let v=lo;v<=hi;v+=step)grid+="<line x1='"+pl+"' x2='"+w+"' y1='"+Y(v)+"' y2='"+Y(v)+"' stroke='rgba(255,255,255,.06)'/><text x='0' y='"+(Y(v)+4)+"' font-size='12' fill='#8A8F95' "+SVG_FONT+">"+v+"</text>";
+  const mean=W.reduce((a,p)=>a+p.w,0)/W.length;
+  const avgLine="<line x1='"+pl+"' x2='"+w+"' y1='"+Y(mean)+"' y2='"+Y(mean)+"' stroke='var(--pale)' stroke-width='1.5' stroke-dasharray='4 4' opacity='.55'/>"+
+    "<text x='"+(pl+(w-pl)*.68)+"' y='"+(Y(mean)-6)+"' text-anchor='middle' font-size='12' fill='#8A8F95' "+SVG_FONT+">avg "+mean.toFixed(1)+"</text>";
+  const dots=W.map(p=>"<circle cx='"+X(p.date)+"' cy='"+Y(p.w)+"' r='3' fill='var(--pale)' opacity='.45'/>"+
+    "<circle cx='"+X(p.date)+"' cy='"+Y(p.w)+"' r='16' fill='transparent' data-read='ro-bw' data-tip='"+fmtD(p.date)+" · "+p.w+" lb'/>").join("");
+  $("pgBw").innerHTML="<svg viewBox='0 0 "+w+" "+h+"' role='img' aria-label='Bodyweight trend, average "+mean.toFixed(1)+" lb'>"+grid+avgLine+bridges+curves+dots+"</svg>"+
+    "<div class='hax'><span style='left:"+(pl/w*100)+"%;transform:none'>"+fmtD(W[0].date)+"</span><span style='right:0;transform:none'>"+fmtD(W[W.length-1].date)+"</span></div>";
+  /* The first trend point is one weigh-in, too noisy to compare against. */
+  const start=W.slice(0,3).reduce((a,p)=>a+p.w,0)/Math.min(3,W.length),dd=tr[tr.length-1]-start;
+  $("pgBwLead").innerHTML="<b>"+tr[tr.length-1].toFixed(1)+"</b> lb"+(W.length>1?" · "+(Math.abs(dd)<.2?"level":(dd>0?"+":"−")+Math.abs(dd).toFixed(1)):"");
+  $("ro-bw").textContent="Tap a dot.";$("ro-bw").classList.remove("on");
+}
+/* Monotone cubic through the points: smooth, and never overshoots between two weigh-ins. */
+function monoPath(p){
+  const n=p.length,dx=[],m=[],t=[];
+  for(let i=0;i<n-1;i++){dx[i]=p[i+1][0]-p[i][0];m[i]=(p[i+1][1]-p[i][1])/dx[i];}
+  t[0]=m[0];t[n-1]=m[n-2];
+  for(let i=1;i<n-1;i++)t[i]=m[i-1]*m[i]<=0?0:3*(dx[i-1]+dx[i])/((2*dx[i]+dx[i-1])/m[i-1]+(dx[i]+2*dx[i-1])/m[i]);
+  let d="M"+p[0][0]+","+p[0][1];
+  for(let i=0;i<n-1;i++)d+="C"+(p[i][0]+dx[i]/3)+","+(p[i][1]+t[i]*dx[i]/3)+" "+(p[i+1][0]-dx[i]/3)+","+(p[i+1][1]-t[i+1]*dx[i]/3)+" "+p[i+1][0]+","+p[i+1][1];
+  return d;
+}
+
+/* Lifetime reps per movement in this week's routine, the next round number,
+   and reps per set then against now. Fixed bells make reps the only dial. */
+function statsReps(S){
+  const moves=[...new Set(Object.values(WEEK).flatMap(d=>d.blocks.flatMap(b=>(b.items||[b]).map(i=>i.m))))].filter(m=>M[m]);
+  const rows=moves.map(m=>{
+    const hist=S.filter(s=>(s.sets||[]).some(x=>x.m===m&&x.reps>0));
+    const perSet=ss=>{const v=ss.flatMap(s=>s.sets.filter(x=>x.m===m&&x.reps>0).map(x=>x.reps));return v.reduce((a,x)=>a+x,0)/v.length;};
+    return {m,t:repsIn(S,m),n:hist.length,then:hist.length>=6?perSet(hist.slice(0,3)):null,now:hist.length>=6?perSet(hist.slice(-3)):null};
+  }).sort((a,b)=>b.t-a.t);
+  $("pgReps").innerHTML=rows.map((r,i)=>{
+    const lo=prevMile(r.t),hi=nextMile(r.t),unit=M[r.m].hold?(M[r.m].lo>=10?"sec":"holds"):"reps";
+    const trend=r.then!==null?"<b>"+r.then.toFixed(1)+" → "+r.now.toFixed(1)+"</b> per set":r.t?r.n+" session"+(r.n===1?"":"s")+" so far":"starts this week";
+    return "<div class='ex"+(i>=REPS_SHOWN?" more":"")+"'><span class='nm'>"+(M[r.m].short||M[r.m].name)+"</span><span class='tot'>"+r.t.toLocaleString("en-CA")+"<small>"+unit+"</small></span>"+
+      "<div class='bar'><i style='width:"+((r.t-lo)/(hi-lo)*100)+"%'></i></div>"+
+      "<div class='meta'><span>"+trend+"</span><span>"+(hi-r.t)+" to "+hi.toLocaleString("en-CA")+"</span></div></div>";
+  }).join("");
+  const btn=$("pgShowAll"),open=$("pgReps").classList.contains("open");
+  btn.hidden=rows.length<=REPS_SHOWN;
+  btn.textContent=open?"Show less":"Show all "+rows.length;
+}
+$("pgShowAll").addEventListener("click",()=>{
+  const open=$("pgReps").classList.toggle("open");
+  $("pgShowAll").setAttribute("aria-expanded",open);
+  $("pgShowAll").textContent=open?"Show less":"Show all "+$("pgReps").children.length;
+});
+/* Tap a mark: its value goes to its card's readout line. The i opens its note. */
+$("p-stats").addEventListener("click",e=>{
+  const i=e.target.closest(".i");
+  if(i){const open=i.getAttribute("aria-expanded")!=="true";i.setAttribute("aria-expanded",open);$(i.getAttribute("aria-controls")).classList.toggle("on",open);return;}
+  const t=e.target.closest("[data-tip]");if(!t)return;
+  const ro=$(t.dataset.read);ro.textContent=t.dataset.tip;ro.classList.add("on");
+});
 
 /* ---------------------------------------------------------------- session */
 let PH=[],idx=0,el=0,holding=false,done=false,dayKey=1,startedAt=0,drift=0,pendingWork=null;
@@ -871,10 +1052,6 @@ async function saveWeight(v){
   WEIGHTS=WEIGHTS.filter(x=>x.date!==rec.date);WEIGHTS.push(rec);
   renderStats();renderWeighPill();toast("Saved");
 }
-$("wtSave").addEventListener("click",async()=>{
-  const v=parseFloat($("wtIn").value);if(!v)return;
-  $("wtIn").value="";await saveWeight(v);
-});
 /* Today's weight, or a way to add it, without leaving the home screen. Once
    logged the pill shows the number, and tapping it again corrects it. */
 function renderWeighPill(){

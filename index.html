@@ -264,10 +264,67 @@ details.cue b{color:var(--pale);font-weight:500}
 .stat:last-child{border-bottom:0;padding-bottom:0}
 .stat .v{font-size:20px;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.02em;white-space:nowrap}
 .stat .v small{font-size:11.5px;color:var(--faint);font-weight:400;letter-spacing:0}
-.bars{display:flex;align-items:flex-end;gap:3px;height:62px;margin-top:16px}
-.bars i{flex:1;background:var(--acc);border-radius:3px;min-height:2px}
-.spark{display:flex;align-items:flex-end;gap:2px;height:46px;margin-top:14px}
-.spark i{flex:1;background:rgba(255,255,255,.3);border-radius:2px;min-height:2px}
+/* Progress. Leads with what only grows (totals, weeks held) and keeps the
+   analysis to the few charts that answer a question at a glance. */
+#p-stats .card{padding:18px 20px}
+#p-stats .hd{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+#p-stats .hd h3{margin:0}
+#p-stats .hd .r{margin-left:auto;font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+#p-stats .hd .r b{color:var(--pale);font-weight:600}
+#p-stats .i{width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,.2);color:var(--dim);font-size:11px;font-weight:600;flex:none;display:grid;place-items:center}
+#p-stats .i[aria-expanded="true"]{background:var(--panel2);color:var(--pale)}
+#p-stats .info{display:none;font-size:13px;color:var(--dim);margin:-4px 0 10px;line-height:1.5;font-weight:300}
+#p-stats .info.on{display:block}
+#p-stats .readout{min-height:18px;margin-top:6px;font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+#p-stats .readout.on{color:var(--pale)}
+#p-stats .lead{font-size:14px;margin-bottom:10px;color:var(--dim)}
+#p-stats .lead b{color:var(--pale);font-variant-numeric:tabular-nums}
+#p-stats svg{display:block;width:100%;overflow:visible}
+.say{font-size:18px;line-height:1.35;font-weight:500;letter-spacing:-.01em}
+.say em{font-style:normal;color:var(--acc)}
+.life{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.life div{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 12px}
+.life b{display:block;font-size:22px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.life span{color:var(--dim);font-size:11.5px}
+.recap{background:linear-gradient(160deg,rgba(255,138,76,.22),rgba(255,138,76,.04) 55%),var(--panel)!important;border-color:rgba(255,138,76,.25)!important}
+.recap .kick{color:var(--acc)}
+.recap h2{font-size:20px;margin:2px 0 12px}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 10px}
+.facts span{display:block;color:var(--dim);font-size:11.5px}
+.facts b{font-size:16px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.facts .wide{grid-column:1/-1}
+.wkcal{display:grid;grid-template-columns:repeat(7,1fr) 22px;gap:4px;align-items:center}
+.wkcal .h{font-size:10.5px;color:var(--faint);text-align:center;font-weight:500}
+.wkcal .d{height:32px;border-radius:8px;background:var(--panel2);display:grid;place-items:center;font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.wkcal .d.on{background:var(--acc);color:#26120A;font-weight:650}
+.wkcal .d.frz{background:var(--ice);color:#0B1E33;font-weight:650}
+.wkcal .d.today{box-shadow:inset 0 0 0 1.5px var(--pale);color:var(--pale)}
+.wkcal .d.fut{background:transparent;color:rgba(255,255,255,.2)}
+.wkcal .n{font-size:12.5px;font-weight:600;text-align:right;color:var(--faint);font-variant-numeric:tabular-nums}
+.wkcal .n.ok{color:var(--acc)}
+.strip{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;cursor:pointer;touch-action:manipulation}
+.strip i{height:34px;border-radius:4px}
+.hax{position:relative;height:18px;font-size:12px;color:var(--dim);margin-top:4px;font-variant-numeric:tabular-nums}
+.hax span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.wk{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:96px}
+.wk button{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.wk i{width:100%;border-radius:4px 4px 0 0;background:var(--dim)}
+.wk em{display:block;padding-top:4px;text-align:center;font-size:11px;font-weight:650;font-style:normal;color:#121315}
+.wk span{font-size:11.5px;line-height:16px;color:var(--dim)}
+.wk .avgl{position:absolute;left:-4px;right:-4px;border-top:2px dashed var(--acc);pointer-events:none}
+.avgk{display:inline-block;width:14px;border-top:2px dashed var(--acc);vertical-align:middle;margin-right:6px}
+.ex{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:11px 0;border-top:1px solid var(--line)}
+.ex:first-child{border-top:0;padding-top:2px}
+.ex .nm{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex .tot{font-size:17px;font-weight:650;text-align:right;font-variant-numeric:tabular-nums}
+.ex .tot small{font-size:11.5px;font-weight:400;color:var(--dim);margin-left:3px}
+.ex .bar{grid-column:1/-1;height:5px;border-radius:3px;background:var(--panel2);overflow:hidden;margin-top:4px}
+.ex .bar i{display:block;height:100%;border-radius:3px;background:var(--acc)}
+.ex .meta{grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
+.ex .meta b{color:var(--pale);font-weight:500}
+.ex.more{display:none}
+#pgReps.open .ex.more{display:grid}
+.showall{width:100%;margin-top:6px;padding:11px;border-radius:12px;background:var(--panel2);color:var(--dim);font-size:13.5px;text-align:center}
 .editor{position:fixed;inset:0;z-index:70;background:rgba(6,7,8,.72);backdrop-filter:blur(14px);
   display:none;align-items:flex-end;justify-content:center}
 .editor.on{display:flex}
@@ -433,24 +490,38 @@ details.cue b{color:var(--pale);font-weight:500}
   <!-- STATS -->
   <section class="page" id="p-stats">
     <span class="kick">The numbers</span>
-    <h1 style="font-size:30px;margin:6px 0 4px">Progress</h1>
-    <div class="card" id="retroCard" style="display:none">
-      <h3>Then and now</h3><div id="retro"></div>
-    </div>
-    <div class="card"><h3>Personal records</h3><div id="prs"></div></div>
-    <div class="card"><h3>When you train</h3>
-      <div class="bars" id="hourBars"></div>
-      <div class="muted mono" id="hourNote" style="margin-top:8px"></div></div>
-    <div class="card"><h3>Session length</h3>
-      <div class="spark" id="lenSpark"></div>
-      <div class="muted mono" id="lenNote" style="margin-top:8px"></div></div>
-    <div class="card"><h3>Bodyweight</h3>
-      <div class="spark" id="wtSpark"></div>
-      <div class="row" style="margin-top:12px">
-        <input type="number" id="wtIn" step="0.1" placeholder="lb" style="flex:1">
-        <button class="go small" id="wtSave" style="width:auto;margin:0;padding:11px 18px">Save</button></div>
-      <div class="muted mono" id="wtNote" style="margin-top:8px"></div>
-      <button class="go small" id="wtExp" style="width:100%;margin-top:14px">Export weigh-ins</button></div>
+    <h1 style="font-size:30px;margin:6px 0 12px">Progress</h1>
+    <p class="say" id="pgSay"></p>
+    <div class="life" id="pgLife"></div>
+    <div class="card recap" id="pgRecap" hidden></div>
+    <div class="card" id="pgWeeks" hidden>
+      <div class="hd"><h3>Weeks</h3><button class="i" aria-expanded="false" aria-controls="i-wk" aria-label="About weeks">i</button><span class="r" id="pgStreak"></span></div>
+      <p class="info" id="i-wk">A week counts at 4 days, trained or frozen. Blue is a freeze. The week in progress never breaks the run.</p>
+      <div class="wkcal" id="pgCal"></div>
+      <div class="readout" id="ro-cal">Tap a day.</div></div>
+    <div class="card" id="pgCmpCard" hidden>
+      <div class="hd"><h3 id="pgCmpH"></h3></div>
+      <div class="lead" id="pgCmpLead"></div>
+      <div id="pgCmp"></div></div>
+    <div class="card" id="pgHourCard" hidden>
+      <div class="hd"><h3>When you train</h3><span class="r" id="pgHourLead"></span></div>
+      <div class="strip" id="pgHours" role="img"></div><div class="hax" id="pgHax"></div>
+      <div class="readout" id="ro-h">Tap an hour.</div></div>
+    <div class="card" id="pgLenCard" hidden>
+      <div class="hd"><h3>Session length</h3><span class="r" id="pgLenLead"></span></div>
+      <div class="wk" id="pgLen"></div>
+      <div class="readout" id="ro-len">Tap a day.</div></div>
+    <div class="card">
+      <div class="hd"><h3>Bodyweight</h3><button class="i" aria-expanded="false" aria-controls="i-bw" aria-label="About the trend">i</button><span class="r" id="pgBwLead"></span></div>
+      <p class="info" id="i-bw">The line is your trend: each weigh-in moves it a little, so one salty dinner barely shows. Dashed where you went more than a week without weighing in. Log your weight from the home screen.</p>
+      <div id="pgBw"></div>
+      <div class="readout" id="ro-bw"></div>
+      <button class="go small" id="wtExp" style="width:100%;margin-top:12px">Export weigh-ins</button></div>
+    <div class="card" id="pgRepsCard" hidden>
+      <div class="hd"><h3>Every rep counts</h3><button class="i" aria-expanded="false" aria-controls="i-reps" aria-label="About this list">i</button><span class="r">all time</span></div>
+      <p class="info" id="i-reps">Total reps since your first session, and the next round number. Bottom left: average reps per set in your first 3 sessions → your last 3.</p>
+      <div id="pgReps"></div>
+      <button class="showall" id="pgShowAll" aria-expanded="false" aria-controls="pgReps"></button></div>
   </section>
 
   <!-- SETTINGS -->

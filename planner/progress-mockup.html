@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Progress mockup</title>
+<style>
+:root{
+  --shell:#08090A; --panel:rgba(255,255,255,.038); --panel2:rgba(255,255,255,.06);
+  --line:rgba(255,255,255,.075); --pale:#F4F4F5; --dim:#9A9FA5; --faint:#7C8289;
+  --acc:#FF8A4C; --acc-rgb:255,138,76; --frz:#6FA8E8;
+  --font:Geist,ui-sans-serif,-apple-system,system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--shell);color:var(--pale);font:14px/1.5 var(--font);-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(ellipse 90% 42% at 50% -6%,rgba(var(--acc-rgb),.07),transparent 62%);background-attachment:fixed}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left}
+.phone{max-width:420px;margin:0 auto;padding:28px 16px 60px}
+.note{font:500 11px var(--mono);color:var(--faint);letter-spacing:.06em;margin-bottom:18px}
+.kick{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);font-weight:500}
+h1{font-size:30px;font-weight:600;letter-spacing:-.021em;margin:6px 0 12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:16px 18px;margin-top:12px}
+.hd{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.hd h3{font-size:16px;font-weight:600}
+.hd .r{margin-left:auto;font-size:12.5px;color:var(--dim)}
+.hd .r b{font-family:var(--mono);color:var(--pale)}
+/* Explanations live behind the i, closed by default. */
+.i{width:20px;height:20px;border-radius:50%;border:1px solid rgba(255,255,255,.2);color:var(--faint);font:600 11px/18px var(--mono);text-align:center;flex:none}
+.i[aria-expanded="true"]{background:var(--panel2);color:var(--pale)}
+.info{display:none;font-size:12.5px;color:var(--dim);margin:-4px 0 10px}
+.info.on{display:block}
+.readout{min-height:18px;margin-top:6px;font:500 12px var(--mono);color:var(--faint)}
+.readout.on{color:var(--pale)}
+.lead{font-size:14px;margin-bottom:10px}
+.lead b{font-family:var(--mono)}
+
+/* the sentence and the totals that only grow */
+.say{font-size:18px;line-height:1.35;font-weight:500;letter-spacing:-.01em}
+.say em{font-style:normal;color:var(--acc)}
+.life{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.life div{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 12px}
+.life b{display:block;font:650 22px/1.1 var(--mono);letter-spacing:-.02em}
+.life span{color:var(--dim);font-size:11.5px}
+
+/* last month: the card meant to be screenshotted */
+.recap{background:linear-gradient(160deg,rgba(var(--acc-rgb),.22),rgba(var(--acc-rgb),.04) 55%),var(--panel);border-color:rgba(var(--acc-rgb),.25)}
+.recap .kick{color:var(--acc)}
+.recap h2{font-size:20px;font-weight:600;letter-spacing:-.02em;margin:2px 0 12px}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 10px}
+.facts span{display:block;color:var(--dim);font-size:11px}
+.facts b{font:600 15.5px/1.25 var(--mono);letter-spacing:-.01em}
+.facts .wide{grid-column:1/-1}
+
+/* last five weeks */
+.cal{display:grid;grid-template-columns:repeat(7,1fr) 22px;gap:4px;align-items:center}
+.cal .h{font:500 10.5px var(--mono);color:var(--faint);text-align:center}
+.cal .d{height:30px;border-radius:7px;background:var(--panel2);display:grid;place-items:center;font:500 10.5px var(--mono);color:var(--faint)}
+.cal .d.on{background:var(--acc);color:#2A1206;font-weight:650}
+.cal .d.frz{background:var(--frz);color:#0B1E33;font-weight:650}
+.cal .d.today{box-shadow:inset 0 0 0 1.5px var(--pale);color:var(--pale)}
+.cal .d.fut{background:transparent;color:rgba(255,255,255,.18)}
+.cal .n{font:600 12px var(--mono);text-align:right;color:var(--faint)}
+.cal .n.ok{color:var(--acc)}
+
+/* charts */
+.chart svg{display:block;width:100%;overflow:visible}
+.bars{display:flex;gap:2px;align-items:flex-end;height:50px}
+.bars i{flex:1;border-radius:3px 3px 0 0;background:var(--dim);min-height:2px}
+.hax{position:relative;height:18px;font:500 12px var(--mono);color:var(--faint);margin-top:4px}
+.hax span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.strip{display:grid;grid-template-columns:repeat(24,1fr);gap:2px}
+.strip{cursor:pointer;touch-action:manipulation}
+.strip i{height:34px;border-radius:4px;display:grid;place-items:center}
+.strip b{font:650 10.5px var(--mono)}
+.hax.parts{height:18px;font:500 11.5px var(--font);color:var(--dim)}
+.hax.parts b{font:600 12px var(--mono);color:var(--pale)}
+.wk{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:96px}
+.wk .avgl{position:absolute;left:-4px;right:-4px;border-top:2px dashed var(--acc);pointer-events:none}
+.avgk{display:inline-block;width:14px;border-top:2px dashed var(--acc);vertical-align:middle;margin-right:6px}
+.wk button{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.wk em{display:block;padding-top:4px;text-align:center;font:650 10.5px var(--mono);font-style:normal;color:#121315}
+.wk i{width:100%;border-radius:4px 4px 0 0;background:var(--dim);opacity:.8}
+.wk span{font:500 10.5px/16px var(--mono);color:var(--faint)}
+
+/* every rep, all time */
+.ex{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:11px 0;border-top:1px solid var(--line)}
+.ex:first-child{border-top:0;padding-top:2px}
+.ex .nm{font-weight:500}
+.ex .tot{font:650 17px var(--mono);text-align:right}
+.ex .tot small{font:500 11px var(--font);color:var(--faint);margin-left:3px}
+.ex .bar{grid-column:1/-1;height:5px;border-radius:3px;background:var(--panel2);overflow:hidden;margin-top:4px}
+.ex .bar i{display:block;height:100%;border-radius:3px;background:var(--acc)}
+.ex .meta{grid-column:1/-1;display:flex;justify-content:space-between;color:var(--faint);font-size:11.5px}
+.ex .meta b{color:var(--dim);font-weight:500;font-family:var(--mono)}
+.ex.more{display:none}
+#reps.open .ex.more{display:grid}
+.showall{width:100%;margin-top:6px;padding:10px;border-radius:12px;background:var(--panel2);color:var(--dim);font-size:13px;text-align:center}
+.removed{margin-top:20px;color:var(--faint);font-size:12px;padding:0 4px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="note">MOCKUP · YOUR REAL DATA, AUG 23 → OCT 24</div>
+  <span class="kick">The numbers</span>
+  <h1>Progress</h1>
+
+  <p class="say" id="say"></p>
+  <div class="life" id="life"></div>
+
+  <div class="card recap" id="recap"></div>
+
+  <div class="card">
+    <div class="hd"><h3>Weeks</h3><button class="i" aria-expanded="false" aria-controls="i-wk" aria-label="About weeks">i</button><span class="r" id="streak"></span></div>
+    <p class="info" id="i-wk">A week counts at 4 days, trained or frozen. Blue is a freeze. The week in progress never breaks the run.</p>
+    <div class="cal" id="cal"></div>
+    <div class="readout" id="ro-cal">Tap a day.</div>
+  </div>
+
+  <div class="card chart">
+    <div class="hd"><h3 id="cmpH"></h3></div>
+    <div class="lead" id="cmpLead"></div>
+    <div id="cmp"></div>
+  </div>
+
+  <div class="card chart">
+    <div class="hd"><h3>When you train</h3><span class="r" id="hourLead"></span></div>
+    <div class="strip" id="hours" role="img"></div><div class="hax" id="hax"></div>
+    <div class="readout" id="ro-h">Tap an hour.</div>
+  </div>
+
+  <div class="card">
+    <div class="hd"><h3>Session length</h3><span class="r" id="lenLead"></span></div>
+    <div class="wk" id="len"></div>
+    <div class="readout" id="ro-len">Tap a day.</div>
+  </div>
+
+  <div class="card chart">
+    <div class="hd"><h3>Bodyweight</h3><button class="i" aria-expanded="false" aria-controls="i-bw" aria-label="About the trend">i</button><span class="r" id="bwLead"></span></div>
+    <p class="info" id="i-bw">The line is your trend: each weigh-in moves it a little, so one salty dinner barely shows. Dashed where you went more than a week without weighing in.</p>
+    <div id="bw"></div>
+    <div class="readout" id="ro-bw">Tap a dot.</div>
+  </div>
+
+  <div class="card">
+    <div class="hd"><h3>Every rep counts</h3><button class="i" aria-expanded="false" aria-controls="i-reps" aria-label="About this list">i</button><span class="r">all time</span></div>
+    <p class="info" id="i-reps">Total reps since your first session, and the next round number. Bottom left: average reps per set in your first 3 sessions → your last 3.</p>
+    <div id="reps"></div><button class="showall" id="showall" aria-expanded="false" aria-controls="reps"></button>
+  </div>
+
+  <div class="removed">Gone: personal records, then and now, per-exercise charts, the weight input (the home screen has it).</div>
+</div>
+
+<script>
+"use strict";
+const D=/*DATA*/null;
+const S=D.sessions.slice().sort((a,b)=>a.date.localeCompare(b.date));
+const W=D.weights.slice().sort((a,b)=>a.date.localeCompare(b.date));
+const TODAY=D.today;
+const WEEK_OK=4, CAL_WEEKS=5;
+const NAMES={pushup:["Push-ups","push-ups"],dip:["Dips","dips"],press:["KB press","presses"],ohext:["OH extension","extensions"],lateral:["Lateral raise","raises"],
+  curl:["KB curl","curls"],reardelt:["Rear delt","rear delts"],bss:["Bulgarian split squat","split squats"],swing:["KB swings","swings"],calfraise:["Calf raise","calf raises"],
+  doorpress:["Doorframe press","holds"]};
+
+const day=s=>new Date(s+"T12:00:00");
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const addDays=(s,n)=>{const d=day(s);d.setDate(d.getDate()+n);return iso(d);};
+const monday=s=>addDays(s,-((day(s).getDay()+6)%7));
+const gapDays=(a,b)=>Math.round((day(b)-day(a))/864e5);
+const fmtD=s=>day(s).toLocaleDateString("en-CA",{month:"short",day:"numeric"});
+const monthName=(s,len)=>day(s).toLocaleDateString("en-CA",{month:len||"long"});
+const hm=sec=>{const m=Math.round(sec/60);return m>=60?Math.floor(m/60)+"h"+String(m%60).padStart(2,"0"):m+" min";};
+const mmss=x=>Math.floor(x/60)+":"+String(Math.round(x%60)).padStart(2,"0");
+const fmtN=n=>n.toLocaleString("en-CA");
+const reps=(ss,m)=>ss.reduce((a,s)=>a+(s.sets||[]).filter(x=>!m||x.m===m).reduce((b,x)=>b+(x.reps||0),0),0);
+const secs=ss=>ss.reduce((a,s)=>a+(s.actualSec||0),0);
+const dates=new Set(S.map(s=>s.date));
+const FRZ=new Set((D.freezes||[]).map(f=>f.date));
+const held=d=>dates.has(d)||FRZ.has(d); // a freeze holds the day, same as the streak on the home screen
+const byDate={};S.forEach(s=>byDate[s.date]=s);
+
+/* ---- weeks: Monday-based, a week counts at WEEK_OK sessions */
+const weeks=[];
+for(let w=monday(S[0].date);w<=monday(TODAY);w=addDays(w,7))
+  weeks.push({w,n:[...Array(7)].filter((_,i)=>held(addDays(w,i))).length,live:w===monday(TODAY)});
+let best=0,run=0;
+weeks.forEach((k,i)=>{
+  if(k.n>=WEEK_OK){run++;best=Math.max(best,run);}
+  else if(!k.live&&i>0)run=0; // the first, partial week and the live one never break it
+});
+const cur=run;
+
+/* ---- the sentence: what changed lately, in words */
+(function(){
+  let back=null;
+  for(let i=1;i<S.length;i++)if(gapDays(S[i-1].date,S[i].date)>=7)back={from:S[i].date,off:gapDays(S[i-1].date,S[i].date)-1};
+  const say=document.getElementById("say");
+  if(back&&gapDays(back.from,TODAY)<=28)
+    say.innerHTML=`Back at it: <em>${S.filter(s=>s.date>=back.from).length} sessions</em> since ${fmtD(back.from)}, after ${back.off} days off.`;
+  else if(cur>=2)say.innerHTML=`<em>${cur} weeks in a row</em> at ${WEEK_OK}+ sessions.`;
+  else say.innerHTML=`<em>${S.filter(s=>s.date>addDays(TODAY,-30)).length} sessions</em> in the last 30 days.`;
+  document.getElementById("life").innerHTML=
+    `<div><b>${S.length}</b><span>sessions</span></div><div><b>${hm(secs(S))}</b><span>trained</span></div><div><b>${fmtN(reps(S))}</b><span>reps</span></div>`;
+})();
+
+/* ---- last full month, in facts */
+(function(){
+  const d0=day(TODAY);d0.setDate(1);d0.setMonth(d0.getMonth()-1);const ym=iso(d0).slice(0,7);
+  const M=S.filter(s=>s.date.startsWith(ym));if(!M.length)return;
+  let longest=0,r=0,prev=null;M.forEach(s=>{r=prev&&gapDays(prev,s.date)===1?r+1:1;longest=Math.max(longest,r);prev=s.date;});
+  const dow=[0,0,0,0,0,0,0];M.forEach(s=>dow[day(s.date).getDay()]++);
+  const hrs=new Array(24).fill(0);M.forEach(s=>s.startedAt&&hrs[new Date(s.startedAt).getHours()]++);
+  const moves={};M.forEach(s=>(s.sets||[]).forEach(x=>moves[x.m]=(moves[x.m]||0)+(x.reps||0)));
+  const topM=Object.entries(moves).filter(([m])=>NAMES[m]).sort((a,b)=>b[1]-a[1])[0];
+  const days=["Sundays","Mondays","Tuesdays","Wednesdays","Thursdays","Fridays","Saturdays"];
+  document.getElementById("recap").innerHTML=`<span class="kick">Last month</span><h2>${monthName(ym+"-15")}, in Reps</h2><div class="facts">
+    <div><span>Sessions</span><b>${M.length}</b></div>
+    <div><span>Trained</span><b>${hm(secs(M))}</b></div>
+    <div><span>Reps</span><b>${fmtN(reps(M))}</b></div>
+    <div><span>Longest run</span><b>${longest} days</b></div>
+    <div><span>Usual start</span><b>${hrs.indexOf(Math.max(...hrs))}:00</b></div>
+    <div><span>Most loyal</span><b>${days[dow.indexOf(Math.max(...dow))]}</b></div>
+    <div class="wide"><span>Most reps</span><b>${fmtN(topM[1])} ${NAMES[topM[0]][1]}</b></div>
+  </div>`;
+})();
+
+/* ---- the last few weeks, day by day */
+(function(){
+  document.getElementById("streak").innerHTML=`<b>${cur}</b> in a row · best <b>${best}</b>`;
+  let h="MTWTFSS".split("").map(c=>`<span class="h">${c}</span>`).join("")+`<span></span>`;
+  weeks.slice(-CAL_WEEKS).forEach(k=>{
+    for(let i=0;i<7;i++){
+      const d=addDays(k.w,i),s=byDate[d];
+      const cls=d>TODAY?"fut":s?"on":FRZ.has(d)?"frz":"";
+      const at=s&&s.startedAt?new Date(s.startedAt).toLocaleTimeString("en-CA",{hour:"numeric",minute:"2-digit"})+" · ":"";
+      const tip=s?`${fmtD(d)} · ${at}${mmss(s.actualSec||0)} · ${reps([s])} reps`:`${fmtD(d)} · ${d>TODAY?"ahead":FRZ.has(d)?"frozen":"no session"}`;
+      h+=`<button class="d ${cls}${d===TODAY?" today":""}" data-read="ro-cal" data-tip="${tip}" aria-label="${tip}">${day(d).getDate()}</button>`;
+    }
+    h+=`<span class="n ${k.n>=WEEK_OK?"ok":""}">${k.live&&!k.n?"":k.n}</span>`;
+  });
+  document.getElementById("cal").innerHTML=h;
+})();
+
+/* ---- this month against last month, running count of sessions */
+(function(){
+  const thisM=TODAY.slice(0,7),d0=day(TODAY);d0.setDate(1);d0.setMonth(d0.getMonth()-1);
+  const lastM=iso(d0).slice(0,7),dom=+TODAY.slice(8);
+  const run=(ym,upto)=>{let c=0;const out=[[0,0]];for(let i=1;i<=upto;i++){if(dates.has(ym+"-"+String(i).padStart(2,"0")))c++;out.push([i,c]);}return out;};
+  const lastLen=new Date(+lastM.slice(0,4),+lastM.slice(5),0).getDate();
+  const A=run(thisM,dom),B=run(lastM,lastLen);
+  const w=388,h=96,padR=58,mx=Math.max(4,B[B.length-1][1],A[A.length-1][1]);
+  const X=i=>i/31*(w-padR),Y=v=>h-4-v/mx*(h-12);
+  const path=p=>p.map(([i,v])=>X(i)+","+Y(v)).join(" ");
+  const a=A[A.length-1][1],b=B[B.length-1][1],bAt=B[Math.min(dom,lastLen)][1];
+  const lastName=monthName(lastM+"-15");
+  document.getElementById("cmpH").textContent=monthName(TODAY)+" vs "+lastName;
+  document.getElementById("cmpLead").innerHTML=`<b>${a}</b> sessions so far. ${lastName} had <b>${bAt}</b> by the ${dom}th.`;
+  document.getElementById("cmp").innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Sessions: ${a} this month, ${bAt} last month by the same day">
+    <line x1="${X(dom)}" x2="${X(dom)}" y1="0" y2="${h}" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 3"/>
+    <polyline points="${path(B)}" fill="none" stroke="var(--dim)" stroke-width="2" stroke-linejoin="round" opacity=".7"/>
+    <polyline points="${path(A)}" fill="none" stroke="var(--acc)" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="${X(dom)}" cy="${Y(a)}" r="4" fill="var(--acc)" stroke="#121315" stroke-width="2"/>
+    <text x="${X(lastLen)+8}" y="${Y(b)+4}" font-size="12" fill="#9A9FA5" font-family="SF Mono, Menlo, monospace">${monthName(lastM+"-15","short")} ${b}</text>
+    <text x="${X(dom)+8}" y="${Y(a)+4}" font-size="12" fill="#FF8A4C" font-family="SF Mono, Menlo, monospace">${monthName(TODAY,"short")} ${a}</text>
+  </svg>`;
+})();
+
+/* ---- when you train: 24 hours on one strip, brighter = more sessions, counts on the busy hours */
+(function(){
+  const ampm=h=>h+":00"; // 24 h clock: short enough that the axis labels never collide
+  const hours=new Array(24).fill(0);S.forEach(s=>{if(s.startedAt)hours[new Date(s.startedAt).getHours()]++;});
+  const mx=Math.max(1,...hours);
+  const strip=document.getElementById("hours");
+  strip.innerHTML=hours.map((v,i)=>{const a=v?.15+.85*v/mx:.05;
+    return `<i style="background:rgba(255,138,76,${a})">${v>=3?`<b style="color:${a>.7?"#2A1206":"var(--pale)"}">${v}</b>`:""}</i>`;}).join("");
+  strip.setAttribute("aria-label","Sessions by start hour: "+hours.map((v,i)=>v?ampm(i)+" "+v:"").filter(Boolean).join(", "));
+  /* The whole strip is one target: a tap anywhere picks the nearest hour, so thin cells never miss. */
+  strip.addEventListener("pointerdown",e=>{const r=strip.getBoundingClientRect(),i=Math.min(23,Math.max(0,Math.floor((e.clientX-r.left)/r.width*24)));
+    const ro=document.getElementById("ro-h");ro.textContent=`${ampm(i)}–${ampm(i+1)} · ${hours[i]} session${hours[i]===1?"":"s"}`;ro.classList.add("on");});
+  document.getElementById("hax").innerHTML=[[0,"0:00"],[6,"6:00"],[12,"12:00"],[18,"18:00"],[24,"24:00"]].map(([h,l])=>`<span style="left:${h/24*100}%;${h===0?"transform:none":h===24?"transform:translateX(-100%)":""}">${l}</span>`).join("");
+  /* Say both habits, not one hour: the data is two groups. */
+  const parts=[["mornings",5,12],["afternoons",12,17],["evenings",17,24],["nights",0,5]].map(([n,a,b])=>({n,v:hours.slice(a,b).reduce((x,y)=>x+y,0)})).sort((x,y)=>y.v-x.v);
+  document.getElementById("hourLead").innerHTML=parts.slice(0,2).filter(p=>p.v).map(p=>`<b>${p.v}</b> ${p.n}`).join(" · ");
+})();
+
+/* ---- session length by weekday */
+(function(){
+  const order=[1,2,3,4,5,6,0],lbl=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],longName=["Sundays","Mondays","Tuesdays","Wednesdays","Thursdays","Fridays","Saturdays"];
+  const ls=S.filter(s=>s.actualSec);
+  const by=order.map(dk=>{const xs=ls.filter(s=>day(s.date).getDay()===dk);return {dk,n:xs.length,avg:xs.length?secs(xs)/xs.length:0};});
+  const mx=Math.max(...by.map(b=>b.avg));
+  /* The average of the weekday averages, so a day you train more often doesn't weigh more. */
+  const days=by.filter(b=>b.n),avg=days.reduce((a,b)=>a+b.avg,0)/days.length;
+  document.getElementById("lenLead").innerHTML=`<i class="avgk"></i><b>${mmss(avg)}</b> average`;
+  document.getElementById("len").innerHTML=by.map(b=>`<button data-read="ro-len" data-tip="${longName[b.dk]} · ${mmss(b.avg)} average over ${b.n} session${b.n===1?"":"s"}">
+    <i style="height:${b.avg/mx*62}px"><em>${b.n?Math.round(b.avg/60)+"m":""}</em></i><span>${lbl[b.dk]}</span></button>`).join("")+`<div class="avgl" style="bottom:${20+avg/mx*62}px" aria-hidden="true"></div>`;
+})();
+
+/* ---- bodyweight: a smoothed trend, not the raw scale */
+(function(){
+  if(!W.length)return;
+  /* Each weigh-in pulls the trend 10% of the way per day elapsed (Hacker's Diet style). */
+  const tr=[];W.forEach((p,i)=>{if(!i){tr.push(p.w);return;}const k=1-Math.pow(.9,Math.max(1,gapDays(W[i-1].date,p.date)));tr.push(tr[i-1]+k*(p.w-tr[i-1]));});
+  const w=388,h=104,pl=30,pad=10,t0=day(W[0].date).getTime(),t1=day(W[W.length-1].date).getTime();
+  const lo=Math.floor(Math.min(...W.map(x=>x.w))),hi=Math.ceil(Math.max(...W.map(x=>x.w)));
+  const X=d=>pl+(day(d).getTime()-t0)/Math.max(1,t1-t0)*(w-pl-pad),Y=v=>h-pad-(v-lo)/Math.max(1,hi-lo)*(h-2*pad);
+  const pts=W.map((p,i)=>[X(p.date),Y(tr[i]),p.date]);
+  /* Split where weigh-ins are more than a week apart: solid curves, dashed bridges. */
+  const segs=[[pts[0]]];for(let i=1;i<pts.length;i++){if(gapDays(pts[i-1][2],pts[i][2])>7)segs.push([]);segs[segs.length-1].push(pts[i]);}
+  const curves=segs.filter(s=>s.length>1).map(s=>`<path d="${mono(s)}" fill="none" stroke="var(--acc)" stroke-width="2.5" stroke-linecap="round"/>`).join("");
+  const bridges=segs.slice(1).map((s,i)=>{const a=segs[i][segs[i].length-1],b=s[0];return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="var(--acc)" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round" opacity=".55"/>`;}).join("");
+  const g=[];for(let v=lo;v<=hi;v++)g.push(`<line x1="${pl}" x2="${w}" y1="${Y(v)}" y2="${Y(v)}" stroke="rgba(255,255,255,.06)"/><text x="0" y="${Y(v)+4}" font-size="11" fill="#7C8289" font-family="SF Mono, Menlo, monospace">${v}</text>`);
+  const mean=W.reduce((x,p)=>x+p.w,0)/W.length;
+  const avgLine=`<line x1="${pl}" x2="${w}" y1="${Y(mean)}" y2="${Y(mean)}" stroke="var(--pale)" stroke-width="1.5" stroke-dasharray="4 4" opacity=".55"/><text x="${pl+(w-pl)*.68}" y="${Y(mean)-6}" text-anchor="middle" font-size="11" fill="#9A9FA5" font-family="SF Mono, Menlo, monospace">avg ${mean.toFixed(1)}</text>`;
+  const dots=W.map(p=>`<circle cx="${X(p.date)}" cy="${Y(p.w)}" r="3" fill="var(--pale)" opacity=".45"/><circle cx="${X(p.date)}" cy="${Y(p.w)}" r="16" fill="transparent" data-read="ro-bw" data-tip="${fmtD(p.date)} · ${p.w} lb"/>`).join("");
+  document.getElementById("bw").innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Bodyweight trend, average ${mean.toFixed(1)} lb">${g.join("")}${avgLine}${bridges}${curves}${dots}</svg><div class="hax"><span style="left:${pl/w*100}%;transform:none">${fmtD(W[0].date)}</span><span style="right:0;transform:none">${fmtD(W[W.length-1].date)}</span></div>`;
+  const start=W.slice(0,3).reduce((a,p)=>a+p.w,0)/Math.min(3,W.length),dd=tr[tr.length-1]-start; // the first trend point is one weigh-in, too noisy to compare against
+  document.getElementById("bwLead").innerHTML=`<b>${tr[tr.length-1].toFixed(1)}</b> lb · ${Math.abs(dd)<.2?"level":(dd>0?"+":"−")+Math.abs(dd).toFixed(1)}`;
+})();
+/* Monotone cubic through the points: smooth, and never overshoots between two weigh-ins. */
+function mono(p){
+  const n=p.length,dx=[],m=[],t=[];
+  for(let i=0;i<n-1;i++){dx[i]=p[i+1][0]-p[i][0];m[i]=(p[i+1][1]-p[i][1])/dx[i];}
+  t[0]=m[0];t[n-1]=m[n-2];
+  for(let i=1;i<n-1;i++)t[i]=m[i-1]*m[i]<=0?0:3*(dx[i-1]+dx[i])/((2*dx[i]+dx[i-1])/m[i-1]+(dx[i]+2*dx[i-1])/m[i]);
+  let d=`M${p[0][0]},${p[0][1]}`;
+  for(let i=0;i<n-1;i++)d+=`C${p[i][0]+dx[i]/3},${p[i][1]+t[i]*dx[i]/3} ${p[i+1][0]-dx[i]/3},${p[i+1][1]-t[i+1]*dx[i]/3} ${p[i+1][0]},${p[i+1][1]}`;
+  return d;
+}
+
+/* ---- every rep counts: lifetime totals, the next round number, then vs now */
+(function(){
+  const SHOWN=4,MILES=[100,250,500,750,1000,1500,2000,2500,3000,4000,5000,7500,10000];
+  const nextMile=t=>MILES.find(x=>x>t)||Math.ceil((t+1)/5000)*5000, prevMile=t=>[0,...MILES].filter(x=>x<=t).pop();
+  const rows=Object.keys(NAMES).map(m=>{
+    const hist=S.filter(s=>(s.sets||[]).some(x=>x.m===m&&x.reps>0));
+    const perSet=ss=>{const v=ss.flatMap(s=>s.sets.filter(x=>x.m===m&&x.reps>0).map(x=>x.reps));return v.reduce((a,x)=>a+x,0)/v.length;};
+    return {m,t:reps(S,m),n:hist.length,then:hist.length>=6?perSet(hist.slice(0,3)):null,now:hist.length>=6?perSet(hist.slice(-3)):null};
+  }).sort((a,b)=>b.t-a.t);
+  document.getElementById("reps").innerHTML=rows.map((r,i)=>{
+    const lo=prevMile(r.t),hi=nextMile(r.t),unit=NAMES[r.m][1]==="holds"?"holds":"reps";
+    const trend=r.then!==null?`<b>${r.then.toFixed(1)} → ${r.now.toFixed(1)}</b> per set`:r.t?`${r.n} session${r.n===1?"":"s"} so far`:"starts this week";
+    return `<div class="ex${i>=SHOWN?" more":""}"><span class="nm">${NAMES[r.m][0]}</span><span class="tot">${fmtN(r.t)}<small>${unit}</small></span>
+      <div class="bar"><i style="width:${(r.t-lo)/(hi-lo)*100}%"></i></div>
+      <div class="meta"><span>${trend}</span><span>${hi-r.t} to ${fmtN(hi)}</span></div></div>`;
+  }).join("");
+  const btn=document.getElementById("showall"),list=document.getElementById("reps");
+  const label=()=>btn.textContent=list.classList.contains("open")?"Show less":`Show all ${rows.length}`;
+  label();
+  btn.addEventListener("click",()=>{const open=list.classList.toggle("open");btn.setAttribute("aria-expanded",open);label();});
+})();
+
+/* Tap or hover a mark: its value goes to its card's readout line. The i opens its note. */
+function show(t){const ro=document.getElementById(t.dataset.read);if(!ro)return;ro.textContent=t.dataset.tip;ro.classList.add("on");}
+document.addEventListener("click",e=>{
+  const i=e.target.closest(".i");
+  if(i){const open=i.getAttribute("aria-expanded")!=="true";i.setAttribute("aria-expanded",open);document.getElementById(i.getAttribute("aria-controls")).classList.toggle("on",open);return;}
+  const t=e.target.closest("[data-tip]");if(t)show(t);
+});
+document.addEventListener("pointerover",e=>{if(e.pointerType!=="mouse")return;const t=e.target.closest("[data-tip]");if(t)show(t);});
+</script>
+</body>
+</html>
