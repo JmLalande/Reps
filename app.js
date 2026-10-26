@@ -45,7 +45,7 @@ const upn=s=>clock(s,Math.floor);
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v27";
+const APP_VERSION="v28";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -114,17 +114,7 @@ function prFor(mKey){
     if(x.m===mKey&&(best===null||x.reps>best.reps))best={reps:x.reps,date:s.date};}));
   return best;
 }
-function progressionNudge(){
-  if(onRamp())return null;
-  for(const key of Object.keys(M)){
-    const recent=setsFor(key,2);
-    if(recent.length<2)continue;
-    const topped=recent.every(r=>r.sets.length&&r.sets.every(x=>x.reps>=M[key].hi));
-    if(topped)return {m:key,name:M[key].name,short:M[key].short.toLowerCase()};
-  }
-  return null;
-}
-const LADDER="Add reps, then lower over 3s, then pause 2s at the bottom, then the vest.";
+
 
 /* The main line is keyed to the day count and has to stay that way, or the
    number on the screen stops matching the number in the sentence. Everything
@@ -184,11 +174,6 @@ function renderToday(){
     or.textContent="Easy weeks, "+daysSinceStart()+"/"+ONRAMP_DAYS+" · leave 3–4 in reserve, no vest";
   }else or.style.display="none";
 
-  const nudge=progressionNudge(), nd=$("nudge");
-  if(nudge){nd.style.display="block";
-    nd.innerHTML="<b>"+nudge.short+": top of the range twice.</b> "+(M[nudge.m].next||LADDER);}
-  else nd.style.display="none";
-
   const done=SESSIONS[todayISO()];
   $("startBtn").textContent=done?(done.complete?"Start again":"Resume"):"Start session";
   const ec=$("editToday");
@@ -197,24 +182,24 @@ function renderToday(){
   else ec.style.display="none";
 
   renderFreeze();
+  renderWeighPill();
 
-  $("planList").innerHTML=day.blocks.map((b,i)=>{
-    const m=M[b.m];
-    return "<li><span class='n'>"+(i+1)+"</span><span class='nm'>"+m.name+"</span><span class='s'>"+
-      b.sets+" × "+blockReps(b)+(b.rest?" · "+b.rest+"s":"")+"</span></li>";
-  }).join("");
+  $("planList").innerHTML=planHtml(day);
 }
+/* A superset reads as 1A, 1B: the letters are the order you alternate in. */
+function planHtml(day){
+  return planRows(day).map(r=>"<li><span class='n'>"+r.tag+"</span><span class='nm'>"+M[r.m].name+
+    (r.how?"<small>"+r.how+"</small>":"")+"</span><span class='s'>"+r.rounds+" × "+r.reps+(r.rest?" · "+r.rest+"s":"")+"</span></li>").join("");
+}
+const dayMoves=day=>[...new Set(day.blocks.flatMap(b=>b.items.map(it=>it.m)))];
 
 /* ---------------------------------------------------------------- routine */
 function renderRoutine(){
   const order=[1,2,3,4,5,6,0];
   $("routineList").innerHTML=order.map(dk=>{
     const d=WEEK[dk];
-    const rows=d.blocks.map((b,i)=>{const m=M[b.m];
-      return "<li><span class='n'>"+(i+1)+"</span><span class='nm'>"+m.name+"</span><span class='s'>"+
-        b.sets+" × "+blockReps(b)+(b.rest?" · "+b.rest+"s":"")+"</span></li>";}).join("");
-    const cues=d.blocks.map(b=>"<p><b>"+M[b.m].short+".</b> "+M[b.m].cue+"</p>").join("");
-    return "<div class='card'><h3>"+DOW[dk]+"</h3><ul class='plan'>"+rows+"</ul>"+
+    const cues=dayMoves(d).map(m=>"<p><b>"+M[m].short+".</b> "+M[m].cue+"</p>").join("");
+    return "<div class='card'><h3>"+DOW[dk]+" · "+d.name+"</h3><ul class='plan'>"+planHtml(d)+"</ul>"+
       "<details class='cue'><summary>How to</summary><div class='body'>"+cues+"</div></details></div>";
   }).join("");
 }
@@ -488,7 +473,8 @@ function activeSoFar(){
   return CARRY+a+Math.max(0,el)+drift;
 }
 function remaining(){let r=Math.max(0,PH[idx].dur-el);for(let i=idx+1;i<PH.length;i++)r+=PH[i].dur;return r;}
-const setLbl=p=>p.sets>1?"Set "+p.set+" of "+p.sets:"Single set";
+/* In a superset the count is rounds: one round is one set of each movement. */
+const setLbl=p=>p.sets>1?(p.pair>1?"Round ":"Set ")+p.set+" of "+p.sets:"Single set";
 const rirLbl=r=>r[0]===r[1]?String(r[0]):r[0]+"–"+r[1];
 function setPips(n,cur){let h="";for(let i=1;i<=n;i++)h+='<i class="'+(i<cur?"done":(i===cur?"cur":""))+'"></i>';$("pips").innerHTML=h;}
 let deltaTimer=null;
@@ -513,8 +499,8 @@ function render(){
   const show=work?p:(nextW||p),sm=M[show.m];
   $("exName").textContent=work?m.name:(nextW?sm.name:"Session ends");
   setPips(show.sets,show.set);
-  $("setNow").textContent=show.sets>1?"Set "+show.set+" of "+show.sets:"";
-  $("target").innerHTML="<b>"+show.reps+"</b>"+(sm.side?" "+sm.side:(sm.hold?"":" reps"))+" · <b>"+sm.load+"</b>";
+  $("setNow").textContent=show.sets>1?setLbl(show):"";
+  $("target").innerHTML="<b>"+show.reps+"</b>"+(sm.side?" "+sm.side:(sm.hold?"":" reps"))+" · <b>"+sm.load+"</b>"+(show.how?" · "+show.how:"");
   $("effort").innerHTML=show.rir
     ?(onRamp()?"Easy weeks · ":"")+"stop <b>"+rirLbl(show.rir)+"</b> short of failure"
     :"";
@@ -535,7 +521,7 @@ function render(){
 function endWork(){
   const p=PH[idx],delta=el-p.dur;
   p.actual=el;drift+=delta;flashDelta(delta);
-  pendingWork={m:p.m,set:p.set,sets:p.sets,def:p.def,rir:p.rir};
+  pendingWork={m:p.m,set:p.set,sets:p.sets,pair:p.pair,def:p.def,rir:p.rir};
   idx++;el=0;anchor=Date.now();
   if(idx>=PH.length){finishing=true;openLog();tone(520,.14,.66);return;}
   holding=true;openLog();tone(520,.14,.66);render();
@@ -565,21 +551,38 @@ function lastReps(mKey,set,side){
    on each side, and nothing in the log could say which side gave out. */
 const SIDES=[{k:"R",lbl:"Right"},{k:"L",lbl:"Left"}];
 let sideVal=null;
-function fillRir(host,target,onPick){
-  host.innerHTML="";
-  for(let n=0;n<=4;n++){
-    const b=document.createElement("button");
-    b.innerHTML="<b>"+(n===4?"4+":n)+"</b>";
-    b.setAttribute("aria-label",n+" reps in reserve");
-    if(target&&n>=target[0]&&n<=target[1])b.classList.add("tgt");
-    b.addEventListener("click",()=>onPick(n));
-    host.appendChild(b);
+/* Three answers instead of five. People miss their reps left by about one, more
+   so far from failure and past twelve reps, so 3 against 4, and 1 against 2,
+   were noise. The stored number keeps the old scale's meaning: 0 failed, 2 is
+   the 1–2 target, 3 is three or more. Holds have no reps to leave, so they only
+   ask to be saved. */
+const EFFORT=[{v:0,t:"Failed",s:"0 left"},{v:2,t:"On target",s:"1–2 left"},{v:3,t:"Easy",s:"3+ left"}];
+const EFFORT_TARGET=2;
+const effortName=v=>v===1?"1 left":v===4?"4+ left":(EFFORT.find(e=>e.v===v)||{t:"–"}).t;
+function effortOptions(cur){
+  const vals=EFFORT.map(e=>e.v);
+  if(typeof cur==="number"&&!vals.includes(cur))vals.push(cur);
+  return vals.sort((a,b)=>a-b).map(v=>"<option value='"+v+"'"+(cur===v?" selected":"")+">"+effortName(v)+"</option>").join("");
+}
+function fillEffort(host,target,onPick){
+  host.innerHTML="";host.classList.toggle("one",!target);
+  if(!target){
+    const b=document.createElement("button");b.innerHTML="<b>Save</b>";
+    b.addEventListener("click",()=>onPick(null));host.appendChild(b);return;
   }
+  const want=target[0]>=3?3:EFFORT_TARGET;
+  EFFORT.forEach(e=>{
+    const b=document.createElement("button");
+    b.innerHTML="<b>"+e.t+"</b><small>"+e.s+"</small>";
+    if(e.v===want)b.classList.add("tgt");
+    b.addEventListener("click",()=>onPick(e.v));
+    host.appendChild(b);
+  });
 }
 function openLog(){
   const m=M[pendingWork.m], per=!!m.side;
   $("logName").textContent=m.name;
-  $("logSet").textContent="Set "+pendingWork.set+" of "+pendingWork.sets;
+  $("logSet").textContent=setLbl(pendingWork);
   $("prTag").classList.remove("on");
   $("logOne").style.display=per?"none":"flex";
   $("logTwo").style.display=per?"flex":"none";
@@ -590,50 +593,36 @@ function openSingle(m){
   repVal=lastReps(pendingWork.m,pendingWork.set)||pendingWork.def||m.def;
   $("repVal").textContent=repVal;
   $("repUnit").textContent=m.hold?"seconds":"reps";
-  $("rirLbl").textContent=pendingWork.rir
-    ?"Reps left in the tank · aim for "+rirLbl(pendingWork.rir)
-    :"Reps left in the tank";
-  fillRir($("rir"),pendingWork.rir,commitLog);
+  $("rirLbl").textContent=pendingWork.rir?"How hard was it":"Hold done";
+  fillEffort($("rir"),pendingWork.rir,commitLog);
   updatePrTag(prFor(pendingWork.m));
 }
 function openSides(m){
   const unit=m.hold?"seconds":"reps", cap=m.hold?600:60, host=$("logTwo");
   sideVal={};host.innerHTML="";
-  const lbl=document.createElement("div");
-  lbl.className="rirlbl";lbl.style.marginTop="0";
-  lbl.textContent=pendingWork.rir
-    ?"One side at a time · aim for "+rirLbl(pendingWork.rir)+" left in the tank"
-    :"One side at a time";
-  host.appendChild(lbl);
   SIDES.forEach(sd=>{
-    const cell={reps:lastReps(pendingWork.m,pendingWork.set,sd.k)||pendingWork.def||m.def,rir:null};
+    const cell={reps:lastReps(pendingWork.m,pendingWork.set,sd.k)||pendingWork.def||m.def};
     sideVal[sd.k]=cell;
     const wrap=document.createElement("div");wrap.className="side";
     wrap.innerHTML="<div class='h'><span>"+sd.lbl+"</span><span>"+unit+"</span></div>"+
       "<div class='cnt'><button aria-label='One fewer'>−</button>"+
       "<div class='v mono'>"+cell.reps+"</div>"+
-      "<button aria-label='One more'>+</button></div><div class='rir'></div>";
+      "<button aria-label='One more'>+</button></div>";
     const pads=wrap.querySelectorAll(".cnt button"), v=wrap.querySelector(".v");
     const bump=d=>{cell.reps=Math.max(0,Math.min(cap,cell.reps+d));v.textContent=cell.reps;sidePr();};
     pads[0].addEventListener("click",()=>bump(-1));
     pads[1].addEventListener("click",()=>bump(1));
-    const row=wrap.querySelector(".rir");
-    fillRir(row,pendingWork.rir,n=>{
-      cell.rir=n;
-      Array.prototype.forEach.call(row.children,(b,i)=>b.classList.toggle("on",i===n));
-      sideReady();
-    });
     host.appendChild(wrap);
   });
-  const save=document.createElement("button");
-  save.className="go";save.id="sideSave";save.disabled=true;save.textContent="Pick both";
-  save.addEventListener("click",commitSides);
-  host.appendChild(save);
+  /* One answer for both sides. Asking it per side doubled the taps for a
+     difference the scale is too coarse to show. */
+  const lbl=document.createElement("div");
+  lbl.className="rirlbl";lbl.textContent=pendingWork.rir?"How hard was it":"Hold done";
+  host.appendChild(lbl);
+  const row=document.createElement("div");row.className="rir";
+  fillEffort(row,pendingWork.rir,commitSides);
+  host.appendChild(row);
   sidePr();
-}
-function sideReady(){
-  const ok=SIDES.every(sd=>sideVal[sd.k].rir!==null), b=$("sideSave");
-  b.disabled=!ok;b.textContent=ok?"Save the set":"Pick both";
 }
 function sidePr(){
   const pr=prFor(pendingWork.m);
@@ -649,11 +638,11 @@ function bumpRep(delta){
   $("repVal").textContent=repVal;
   updatePrTag(prFor(pendingWork.m));
 }
-function commitSides(){
+function commitSides(rir){
   const pr=prFor(pendingWork.m), ts=Date.now();
   const isPr=!!(pr&&SIDES.some(sd=>sideVal[sd.k].reps>pr.reps));
   SIDES.forEach(sd=>logged.push({m:pendingWork.m,set:pendingWork.set,side:sd.k,
-    reps:sideVal[sd.k].reps,rir:sideVal[sd.k].rir,ts:ts}));
+    reps:sideVal[sd.k].reps,rir:rir,ts:ts}));
   closeLog(isPr);
 }
 function commitLog(rir){
@@ -680,6 +669,7 @@ function finish(){
   const n=setCount(logged);
   $("doneNote").textContent=n+(n===1?" set logged. ":" sets logged. ")+
     (streak>0?("Day "+streak+" in a row."):"");
+  renderRate();
   const f=streak>0?dayFacts(streak):null;
   $("doneMs").textContent=f?f.text:"";
   if(f)showBonus($("doneBonus"),f.bonus);
@@ -696,11 +686,27 @@ function finish(){
     }
   }
 }
+/* One number for the whole session, given at the end. It carries what a set's
+   reps-left cannot: a day where getting to the target took more out of you. */
+function renderRate(){
+  const host=$("rate"),cur=(SESSIONS[todayISO()]||{}).srpe;
+  host.innerHTML="";
+  for(let n=1;n<=10;n++){
+    const b=document.createElement("button");b.textContent=n;
+    if(n===cur)b.classList.add("on");
+    b.addEventListener("click",async()=>{
+      const s=SESSIONS[todayISO()];if(!s)return;
+      s.srpe=n;await put("sessions",s);renderRate();
+    });
+    host.appendChild(b);
+  }
+}
 async function saveSession(complete,actual){
   const date=todayISO();
   const rec={date,dayKey,startedAt,endedAt:Date.now(),
     plannedSec:PLANNED,actualSec:actual||null,activeSec:activeSoFar(),
     sets:logged.slice(),complete:!!complete};
+  if(SESSIONS[date]&&SESSIONS[date].srpe)rec.srpe=SESSIONS[date].srpe;
   SESSIONS[date]=rec;
   /* Froze this morning and trained anyway. Refund it rather than charge you
      for a day you showed up for. */
@@ -743,7 +749,9 @@ function loop(){
       const lft=p.dur-el;
       /* A tick already well past its moment is one the phone slept through.
          Skip it, rather than fire the whole ramp at once on waking. */
-      if(!warned&&lft<=WARN_AT){warned=true;if(lft>WARN_AT-.6)warn();}
+      /* A ten second switch inside a superset would get the heads-up and the
+         countdown on top of each other. Short rests get the countdown only. */
+      if(!warned&&lft<=WARN_AT){warned=true;if(lft>WARN_AT-.6&&p.dur>WARN_AT+2)warn();}
       while(cued<CUE_AT.length&&lft<=CUE_AT[cued]){const k=CUE_AT[cued++];if(lft>k-.6)tick();}
     }
     render();
@@ -760,22 +768,24 @@ function openEditor(date){
   const d=new Date(date+"T12:00:00");
   $("edDate").textContent=d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
   $("edDay").textContent=WEEK[s.dayKey].name;
-  $("edMove").innerHTML=WEEK[s.dayKey].blocks.map(b=>"<option value='"+b.m+"'>"+M[b.m].name+"</option>").join("");
+  /* The day's movements as the week runs now, plus any the session logged under
+     an older week, so a set can always be added back to what was done. */
+  const moves=[...new Set(dayMoves(WEEK[s.dayKey]).concat(s.sets.map(x=>x.m)))].filter(m=>M[m]);
+  $("edMove").innerHTML=moves.map(m=>"<option value='"+m+"'>"+M[m].name+"</option>").join("");
   renderEdList();
   $("editor").classList.add("on");
 }
 function renderEdList(){
   const s=SESSIONS[edDate];
   if(!s.sets.length){$("edList").innerHTML="<p class='muted'>No sets left on this day.</p>";return;}
-  let h="<div class='edlab'><span>Reps</span><span>RIR</span></div>";
+  let h="<div class='edlab'><span>Reps</span><span>Effort</span></div>";
   const tally={};s.sets.forEach(x=>{(tally[x.m]=tally[x.m]||new Set()).add(x.set);});
   h+=s.sets.map((x,i)=>{
     const m=M[x.m],n=tally[x.m].size;
     const sd=x.side==="L"?" · Left":(x.side==="R"?" · Right":"");
     return "<div class='edrow'><span class='who'>"+m.name+"<small>Set "+x.set+(n>1?" of "+n:"")+sd+"</small></span>"+
       "<input type='number' inputmode='numeric' value='"+x.reps+"' data-i='"+i+"' data-f='reps'>"+
-      "<select data-i='"+i+"' data-f='rir'>"+[0,1,2,3,4].map(n=>
-        "<option value='"+n+"'"+(x.rir===n?" selected":"")+">"+(n===4?"4+":n)+"</option>").join("")+"</select>"+
+      "<select data-i='"+i+"' data-f='rir'>"+effortOptions(x.rir)+"</select>"+
       "<button class='x' data-del='"+i+"' aria-label='Remove set'>"+
       "<svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round'><path d='M6 6l12 12M18 6L6 18'/></svg></button></div>";
   }).join("");
@@ -805,8 +815,8 @@ async function persistEdit(){
 $("edAdd").addEventListener("click",async()=>{
   const s=SESSIONS[edDate], mk=$("edMove").value, m=M[mk], ts=Date.now();
   const n=new Set(s.sets.filter(x=>x.m===mk).map(x=>x.set)).size+1;
-  if(m.side)SIDES.forEach(sd=>s.sets.push({m:mk,set:n,side:sd.k,reps:m.def,rir:2,ts:ts}));
-  else s.sets.push({m:mk,set:n,reps:m.def,rir:2,ts:ts});
+  if(m.side)SIDES.forEach(sd=>s.sets.push({m:mk,set:n,side:sd.k,reps:m.def,rir:EFFORT_TARGET,ts:ts}));
+  else s.sets.push({m:mk,set:n,reps:m.def,rir:EFFORT_TARGET,ts:ts});
   await persistEdit(); renderEdList();
 });
 $("edDel").addEventListener("click",async()=>{
@@ -856,12 +866,41 @@ document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()
 }));
 $("calPrev").addEventListener("click",()=>{calCursor.setMonth(calCursor.getMonth()-1);renderHistory();});
 $("calNext").addEventListener("click",()=>{calCursor.setMonth(calCursor.getMonth()+1);renderHistory();});
-$("wtSave").addEventListener("click",async()=>{
-  const v=parseFloat($("wtIn").value);if(!v)return;
+async function saveWeight(v){
   const rec={date:todayISO(),w:v};await put("weights",rec);
   WEIGHTS=WEIGHTS.filter(x=>x.date!==rec.date);WEIGHTS.push(rec);
-  $("wtIn").value="";renderStats();toast("Saved");
+  renderStats();renderWeighPill();toast("Saved");
+}
+$("wtSave").addEventListener("click",async()=>{
+  const v=parseFloat($("wtIn").value);if(!v)return;
+  $("wtIn").value="";await saveWeight(v);
 });
+/* Today's weight, or a way to add it, without leaving the home screen. Once
+   logged the pill shows the number, and tapping it again corrects it. */
+function renderWeighPill(){
+  const t=WEIGHTS.find(x=>x.date===todayISO());
+  $("wPillLbl").textContent=t?t.w+" lb":"Weigh in";
+  $("wPill").classList.toggle("done",!!t);
+}
+function weighField(open){
+  $("wPill").hidden=open;$("wForm").hidden=!open;
+  if(!open)return;
+  const t=WEIGHTS.find(x=>x.date===todayISO()),last=WEIGHTS.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
+  $("wQuick").value=t?t.w:"";$("wQuick").placeholder=last?String(last.w):"lb";
+  $("wQuick").focus();
+}
+$("wPill").addEventListener("click",()=>weighField(true));
+$("wForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const v=parseFloat($("wQuick").value);
+  weighField(false);
+  if(v>0)await saveWeight(v);
+});
+/* Leaving the field without saving closes it. Pressing the check button must
+   not count as leaving, so it keeps the focus where it is. */
+$("wForm").querySelector("button").addEventListener("pointerdown",e=>e.preventDefault());
+$("wQuick").addEventListener("blur",()=>weighField(false));
+$("wQuick").addEventListener("keydown",e=>{if(e.key==="Escape")weighField(false);});
 /* Both exports go through the same JSON download, so the weigh-ins land in
    Downloads exactly the way the full backup does, with nothing opened. */
 function saveJSON(name,data){

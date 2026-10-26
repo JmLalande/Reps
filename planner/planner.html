@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Routine planner</title>
+<style>
+/* Reps' own palette, so the planner reads as part of the app. */
+:root{
+  --shell:#08090A; --panel:rgba(255,255,255,.038); --panel2:rgba(255,255,255,.06);
+  --line:rgba(255,255,255,.075); --line2:rgba(255,255,255,.14);
+  --pale:#F4F4F5; --dim:#8A8F95; --faint:#5C6167;
+  --acc:#FF8A4C; --acc-rgb:255,138,76; --teal:#54DFC3; --amber:#FFC46B; --red:#FF7A7A; --ice:#9CC7F0;
+  --font:Geist,ui-sans-serif,-apple-system,system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--shell);color:var(--pale);font:14px/1.5 var(--font);-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(ellipse 80% 40% at 50% -8%,rgba(var(--acc-rgb),.08),transparent 60%);background-attachment:fixed;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 20px 140px}
+h2{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:40px 0 14px}
+
+/* ---- header */
+.top{display:flex;gap:24px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.eyebrow{font:600 11px/1.4 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--acc)}
+.top h1{font-size:30px;font-weight:650;letter-spacing:-.025em;margin-top:4px}
+.top p{color:var(--dim);margin-top:4px;max-width:52ch}
+.kpis{display:flex;gap:10px;flex-wrap:wrap}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 16px;min-width:130px}
+.kpi b{display:block;font:650 24px/1.2 var(--mono);letter-spacing:-.02em}
+.kpi s{color:var(--faint);font:500 12px var(--mono);margin-left:6px;text-decoration:line-through}
+.kpi span{color:var(--dim);font-size:12px}
+
+/* ---- week */
+.week{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:12px}
+.day{position:relative;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;
+  display:flex;flex-direction:column;gap:10px;transition:border-color .15s,background .15s;width:100%}
+.day:hover{border-color:var(--line2);background:var(--panel2)}
+.day.sel{border-color:rgba(var(--acc-rgb),.6)}
+.dh{display:flex;align-items:baseline;gap:8px}
+.dh .dk{font:700 11px var(--mono);letter-spacing:.12em;color:var(--acc)}
+.dh .nm{font-weight:600;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dh .t{font:650 18px var(--mono);letter-spacing:-.02em}
+.dh .t.over{color:var(--amber)}
+.edited{position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 3px var(--shell)}
+.blk{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:stretch}
+.blk .r{font:650 13px var(--mono);color:var(--dim);padding-top:1px}
+.its{display:flex;flex-direction:column;gap:3px;min-width:0}
+.blk.ss .its{border-left:2px solid rgba(var(--acc-rgb),.55);padding-left:9px}
+.it{display:flex;gap:8px;align-items:baseline;min-width:0}
+.it .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it .rp{font:500 12.5px var(--mono);color:var(--pale);white-space:nowrap}
+.it .how{display:block;color:var(--faint);font-size:11.5px;margin-top:-2px}
+.df{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:auto;padding-top:8px;border-top:1px solid var(--line);font-size:11.5px;color:var(--faint)}
+.df .now{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{font:600 10.5px var(--mono);letter-spacing:.04em;padding:2px 7px;border-radius:999px;background:var(--panel2);color:var(--dim);white-space:nowrap}
+.pill.warn{background:rgba(255,196,107,.12);color:var(--amber)}
+.pill.ctx{background:rgba(156,199,240,.1);color:var(--ice)}
+
+/* ---- log table */
+.tbl{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+th{font:600 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+td.r,th.r{text-align:right}
+.v{font:600 11px var(--mono);padding:3px 8px;border-radius:999px}
+.v.easy{background:rgba(84,223,195,.12);color:var(--teal)}
+.v.hard{background:rgba(255,122,122,.12);color:var(--red)}
+.v.ok{background:var(--panel2);color:var(--dim)}
+.arrow{color:var(--acc)}
+.spark{display:inline-flex;gap:2px;align-items:flex-end;height:16px;vertical-align:middle;margin-left:8px}
+.spark i{display:block;width:4px;border-radius:1px;background:var(--dim)}
+.spark i.top{background:var(--teal)}
+
+/* ---- questions */
+.q{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+.q h3{font-size:16px;font-weight:600;margin-bottom:12px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
+.opt{position:relative;display:block;border:1px solid var(--line);border-radius:12px;padding:11px 12px;cursor:pointer;background:rgba(255,255,255,.015)}
+.opt:hover{border-color:var(--line2)}
+.opt input{position:absolute;opacity:0}
+.opt b{display:block;font-size:14px;font-weight:600}
+.opt span{display:block;color:var(--dim);font-size:12.5px;margin-top:3px;line-height:1.45}
+.opt:has(input:checked){border-color:rgba(var(--acc-rgb),.7);background:rgba(var(--acc-rgb),.07)}
+.opt .rec{position:absolute;top:10px;right:10px;font:700 9.5px var(--mono);letter-spacing:.08em;color:var(--acc)}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:12px}
+.why div{font-size:12px;color:var(--dim);line-height:1.45;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.02)}
+.why b{display:block;color:var(--pale);font:650 15px var(--mono)}
+.why a{color:var(--faint)}
+.notes{color:var(--dim);font-size:13px;padding-left:18px}
+.notes li{margin:3px 0}
+
+/* ---- editor drawer */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:30}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(500px,100vw);background:#0E0F11;border-left:1px solid var(--line);z-index:31;
+  transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.dwh{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.dwh .dk{font:700 12px var(--mono);letter-spacing:.12em;color:var(--acc)}
+.dwh input{flex:1;min-width:0;background:transparent;border:0;font-size:18px;font-weight:600;outline:none;border-bottom:1px dashed transparent}
+.dwh input:focus{border-bottom-color:var(--line2)}
+.dwh .t{font:650 18px var(--mono)}
+.x{width:32px;height:32px;border-radius:10px;color:var(--dim);font-size:20px;line-height:1}
+.x:hover{background:var(--panel2);color:var(--pale)}
+.dwb{flex:1;overflow-y:auto;padding:14px 18px 24px;display:flex;flex-direction:column;gap:12px}
+.dwb>*{flex-shrink:0}
+.eb{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--panel)}
+.ebh{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12.5px;color:var(--dim)}
+.ebh .kind{font:700 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--acc)}
+.ebh .sp{flex:1}
+.ei{padding:10px 0;border-top:1px solid var(--line);display:grid;gap:8px}
+.ei:first-of-type{border-top:0;padding-top:0}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--dim)}
+select,.how-in,textarea{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;outline:none;width:100%}
+select:focus,.how-in:focus,textarea:focus{border-color:rgba(var(--acc-rgb),.6)}
+.step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel2)}
+.step button{width:28px;height:30px;color:var(--dim);font-size:16px}
+.step button:hover{background:rgba(255,255,255,.06);color:var(--pale)}
+.step input{width:38px;text-align:center;background:transparent;border:0;font:600 13px var(--mono);outline:none;-moz-appearance:textfield}
+.step input::-webkit-inner-spin-button{display:none}
+.chg .step,.step.chg{border-color:rgba(255,196,107,.6)}
+.hint{font-size:11.5px;color:var(--faint)}
+.hint b{color:var(--teal);font-weight:600}
+.link{color:var(--dim);font-size:12.5px;padding:6px 10px;border-radius:9px;border:1px dashed var(--line2)}
+.link:hover{color:var(--pale);border-color:var(--dim)}
+.link.del{border-style:solid;border-color:transparent;color:var(--faint)}
+.link.del:hover{color:var(--red)}
+.sub{font-size:12.5px;color:var(--dim)}
+.sub b{color:var(--pale);font-family:var(--mono)}
+.tl{display:flex;height:14px;border-radius:5px;overflow:hidden;gap:1px;background:var(--line)}
+.tl i,.tlk i{display:block;min-width:1px}
+.w0{background:var(--acc)}.w1{background:var(--teal)}.w2{background:var(--amber)}
+.tl .r,.tlk .r{background:repeating-linear-gradient(135deg,rgba(255,255,255,.14) 0 3px,transparent 3px 6px)}
+.tl .g,.tlk .g{background:#2A2C30}
+.tlk{display:flex;gap:12px;align-items:center;font-size:11px;color:var(--faint);margin-top:-4px}
+.tlk span{display:flex;gap:5px;align-items:center}
+.tlk i{width:12px;height:8px;border-radius:2px}
+.lbl{color:var(--dim);min-width:0}
+.row .lbl{flex:0 1 auto}
+.lt{font:700 12px var(--mono);color:var(--acc);width:14px}
+.ebf{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line2)}
+.hist{background:rgba(255,255,255,.025);border-radius:10px;padding:8px 10px;display:grid;gap:4px}
+.hh{font-size:11.5px;color:var(--faint)}
+.hh b{color:var(--dim);font-family:var(--mono);font-weight:600}
+.hr{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.hd{font:500 11px var(--mono);color:var(--faint);width:46px}
+.c{font:600 12px var(--mono);padding:1px 6px;border-radius:6px;background:var(--panel2);color:var(--pale)}
+.c sub{font-size:9px;color:var(--faint);margin-left:2px;vertical-align:baseline}
+.c.top{background:rgba(84,223,195,.13);color:var(--teal)}
+.c.over{background:rgba(84,223,195,.28);color:#BFF5EA}
+.c.under{background:rgba(255,122,122,.13);color:var(--red)}
+.hk{font-size:10.5px;color:var(--faint);display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.hk .c{font-size:10px}
+.cmp{font-size:12px;color:var(--faint);border-top:1px solid var(--line);padding-top:12px}
+.cmp b{color:var(--dim)}
+
+/* ---- send dock */
+.dock{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);width:min(760px,calc(100vw - 24px));z-index:20;
+  display:flex;gap:10px;align-items:flex-end;padding:10px;border-radius:18px;background:rgba(20,21,23,.92);border:1px solid var(--line2);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 18px 50px -20px rgba(0,0,0,.9)}
+.dock textarea{flex:1;min-height:42px;max-height:160px;resize:none;border-radius:12px}
+.send{height:42px;padding:0 18px;border-radius:12px;background:var(--acc);color:#1B0D05;font-weight:650;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.send b{background:rgba(0,0,0,.18);border-radius:999px;padding:0 7px;font:700 11px/18px var(--mono)}
+.send:disabled{opacity:.5;cursor:default}
+.send.done{background:var(--teal)}
+.reset{color:var(--faint);font-size:12px;height:42px;padding:0 6px}
+.reset:hover{color:var(--pale)}
+@media (max-width:640px){.step button{width:26px}.step input{width:32px}.dwb{padding:12px 12px 24px}.top h1{font-size:24px}.kpi{min-width:0;flex:1}.wrap{padding:20px 14px 150px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 id="title"></h1>
+      <p id="summary"></p>
+    </div>
+    <div class="kpis" id="kpis"></div>
+  </header>
+
+  <h2>The week · tap a day to edit</h2>
+  <div class="week" id="week"></div>
+
+  <h2>What your log says</h2>
+  <div class="tbl"><table id="log"></table></div>
+
+  <div id="qs"></div>
+  <div id="notes"></div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Edit day"></aside>
+
+<div class="dock">
+  <button class="reset" id="reset" title="Back to the proposal">Reset</button>
+  <textarea id="note" rows="1" placeholder="Note for Claude: what feels off, what you'd want instead…"></textarea>
+  <button class="send" id="send" title="Send to Claude (⌘↩)">Send</button>
+</div>
+
+<script>
+"use strict";
+const D=/*DATA*/null;
+const M=D.moves, P=D.proposal, CUR=D.current, S=D.stats;
+const ORDER=["1","2","3","4","5","6","0"], DOW={1:"MON",2:"TUE",3:"WED",4:"THU",5:"FRI",6:"SAT",0:"SUN"};
+const RULES=Object.assign({noBackToBack:[],notSameDay:[],maxMinutes:99},P.rules||{});
+/* Unsent edits are keyed to the proposal's content, not its file name. A revised proposal under
+   the same name would otherwise be hidden behind the edits made to the old one. */
+const hash=s=>{let x=0;for(let i=0;i<s.length;i++)x=(x*31+s.charCodeAt(i))|0;return (x>>>0).toString(36);};
+const KEY="reps-planner:"+(D.proposalFile||"current")+":"+hash(JSON.stringify(P));
+let SENT=false;
+const clone=o=>JSON.parse(JSON.stringify(o));
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const mmss=s=>Math.floor(s/60)+":"+String(Math.round(s%60)).padStart(2,"0");
+const short=m=>(M[m]&&(M[m].short||M[m].name))||m;
+
+let PLAN, NOTES={}, ANS={};
+try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s){PLAN=s.plan;NOTES=s.notes||{};ANS=s.answers||{};$("note").value=s.note||"";}}catch(e){}
+if(!PLAN)PLAN=clone(P.days);
+const save=()=>{if(SENT)return;try{localStorage.setItem(KEY,JSON.stringify({plan:PLAN,notes:NOTES,answers:ANS,note:$("note").value}));}catch(e){}};
+
+/* ---------------------------------------------------------------- model */
+const work=it=>+(it.work||(M[it.m]&&M[it.m].work)||40);
+/* The app's own estimate: every set's work and rest, nothing after the very last set. */
+function dayTime(day){
+  let t=0;
+  day.blocks.forEach((b,bi)=>{
+    const round=b.items.reduce((a,it)=>a+work(it)+(+it.rest||0),0);
+    t+=round*b.rounds-(+b.items[b.items.length-1].rest||0);
+    if(bi<day.blocks.length-1)t+=+b.next||0;
+  });
+  return t;
+}
+const restOf=(b,i)=>b.items.reduce((a,it,j)=>a+(+it.rest||0)+(j===i?0:work(it)),0);
+const sets=days=>ORDER.reduce((a,dk)=>a+(days[dk]?days[dk].blocks.reduce((x,b)=>x+b.rounds*b.items.length,0):0),0);
+const restShare=days=>{let r=0,all=0;ORDER.forEach(dk=>days[dk]&&days[dk].blocks.forEach(b=>b.items.forEach(it=>{r+=b.rounds*(+it.rest||0);all+=b.rounds*(work(it)+(+it.rest||0));})));return all?r/all:0;};
+const avg=a=>a.reduce((x,y)=>x+y,0)/(a.length||1);
+const reps=it=>{const m=M[it.m]||{},u=it.unit||(m.hold?"s":"");return (it.lo===it.hi?it.lo:it.lo+"–"+it.hi)+u+(m.side&&!m.hold?"/side":"");};
+function blockText(b){return b.rounds+"× "+b.items.map(it=>short(it.m)+" "+reps(it)+(it.how?" ("+it.how+")":"")+" +"+it.rest+"s").join(" ⇄ ");}
+const dayText=d=>d?d.name+": "+d.blocks.map(blockText).join(" | "):"(none)";
+
+function warnings(dk){
+  const out=[], i=ORDER.indexOf(dk), prev=ORDER[(i+6)%7];
+  const has=(k,m)=>PLAN[k]&&PLAN[k].blocks.some(b=>b.items.some(it=>it.m===m));
+  new Set(PLAN[dk].blocks.flatMap(b=>b.items.map(it=>it.m))).forEach(m=>{
+    if(RULES.noBackToBack.includes(m)&&has(prev,m))out.push(short(m)+" also "+DOW[prev].toLowerCase());
+  });
+  RULES.notSameDay.forEach(([a,b])=>{if(has(dk,a)&&has(dk,b))out.push(short(a)+" with "+short(b));});
+  if(dayTime(PLAN[dk])>RULES.maxMinutes*60)out.push("over "+RULES.maxMinutes+" min");
+  return out;
+}
+const dayChanged=dk=>JSON.stringify(PLAN[dk])!==JSON.stringify(P.days[dk]);
+function changes(){
+  return ORDER.filter(dayChanged).map(dk=>DOW[dk]+": "+dayText(P.days[dk])+"  →  "+dayText(PLAN[dk]));
+}
+
+/* ---------------------------------------------------------------- header */
+function renderTop(){
+  $("eyebrow").textContent="Reps · routine planner · "+(P.date||D.generated.slice(0,10));
+  $("title").textContent=P.title||"Rework";
+  $("summary").textContent=P.summary||"";
+  const nowT=avg(ORDER.filter(dk=>CUR[dk]).map(dk=>dayTime(CUR[dk]))), newT=avg(ORDER.map(dk=>dayTime(PLAN[dk])));
+  $("kpis").innerHTML=
+    `<div class="kpi"><b>${mmss(newT)}<s>${mmss(nowT)}</s></b><span>per day, app clock</span></div>`+
+    `<div class="kpi"><b>${Math.round(restShare(PLAN)*100)}%<s>${Math.round(restShare(CUR)*100)}%</s></b><span>of it resting</span></div>`+
+    `<div class="kpi"><b>${sets(PLAN)}<s>${sets(CUR)}</s></b><span>sets a week</span></div>`;
+}
+
+/* ---------------------------------------------------------------- week */
+function renderWeek(){
+  $("week").innerHTML=ORDER.map(dk=>{
+    const d=PLAN[dk], t=dayTime(d), w=warnings(dk), c=CUR[dk], real=S.days[dk];
+    const blocks=d.blocks.map(b=>`<div class="blk${b.items.length>1?" ss":""}"><span class="r">${b.rounds}×</span><div class="its">${
+      b.items.map(it=>`<div><div class="it"><span class="n">${esc(short(it.m))}</span><span class="rp">${esc(reps(it))}</span></div>${it.how?`<span class="how">${esc(it.how)}</span>`:""}</div>`).join("")}</div></div>`).join("");
+    const nowLine=c?`Now ${mmss(dayTime(c))}${real?" (real "+mmss(real.real)+")":""} · ${c.blocks.map(b=>short(b.items[0].m)).join(", ")}`:"";
+    const ctx=P.context&&P.context[dk]?`<span class="pill ctx">${esc(P.context[dk])}</span>`:"";
+    return `<button class="day${sel===dk?" sel":""}" data-day="${dk}">
+      ${dayChanged(dk)||(NOTES[dk]||"").trim()?'<span class="edited" title="Edited"></span>':""}
+      <div class="dh"><span class="dk">${DOW[dk]}</span><span class="nm">${esc(d.name)}</span><span class="t${t>RULES.maxMinutes*60?" over":""}">${mmss(t)}</span></div>
+      ${blocks}
+      <div class="df">${ctx}${w.map(x=>`<span class="pill warn">${esc(x)}</span>`).join("")}<span class="now">${esc(nowLine)}</span></div>
+    </button>`;
+  }).join("");
+}
+
+/* ---------------------------------------------------------------- log */
+function proposedFor(m){for(const dk of ORDER)for(const b of PLAN[dk].blocks)for(const it of b.items)if(it.m===m)return reps(it)+(it.how?" · "+it.how:"");return "dropped";}
+function renderLog(){
+  const label={easy:"Too easy",hard:"Too hard",ok:"On target"};
+  const used=m=>[CUR,PLAN].some(w=>ORDER.some(dk=>w[dk]&&w[dk].blocks.some(b=>b.items.some(it=>it.m===m))));
+  const keys=Object.keys(S.moves).filter(m=>M[m]&&used(m)).sort((a,b)=>({easy:0,hard:1,ok:2}[S.moves[a].verdict]-{easy:0,hard:1,ok:2}[S.moves[b].verdict])||S.moves[b].top-S.moves[a].top);
+  $("log").innerHTML=`<tr><th>Exercise</th><th>Asked</th><th class="r">You averaged</th><th class="r">At top</th><th>Last 3</th><th></th><th>New</th></tr>`+
+    keys.map(m=>{
+      const s=S.moves[m], u=s.hold?"s":"", mx=Math.max(s.hi,...s.recent,1);
+      const spark=`<span class="spark">${s.recent.map(v=>`<i class="${v>=s.hi?"top":""}" style="height:${Math.max(15,100*v/mx)}%"></i>`).join("")}</span>`;
+      return `<tr><td>${esc(M[m].name||m)}</td><td class="num">${esc(M[m].reps||(s.lo===s.hi?s.lo:s.lo+"–"+s.hi)+u)}</td><td class="r num">${s.avg}${u} <span style="color:var(--faint)">(${s.first}→${s.last})</span></td><td class="r num">${s.top}%</td><td class="num">${s.recent.join(" · ")}${spark}</td><td><span class="v ${s.verdict}">${label[s.verdict]}</span></td><td><span class="arrow">→</span> <span class="num">${esc(proposedFor(m))}</span></td></tr>`;
+    }).join("");
+}
+
+/* ---------------------------------------------------------------- questions */
+function renderQs(){
+  const qs=P.questions||[];
+  $("qs").innerHTML=qs.length?`<h2>Decide</h2>`+qs.map(q=>{
+    const v=ANS[q.id]||q.default;
+    return `<div class="q"><h3>${esc(q.title)}</h3><div class="opts">${q.options.map(o=>
+      `<label class="opt"><input type="radio" name="q-${esc(q.id)}" value="${esc(o.value)}"${o.value===v?" checked":""}>${o.rec?'<span class="rec">PICK</span>':""}<b>${esc(o.label)}</b><span>${esc(o.desc||"")}</span></label>`).join("")}</div>
+      ${q.why?`<div class="why">${q.why.map(w=>`<div><b>${esc(w.stat)}</b>${esc(w.text)} ${w.url?`<a href="${esc(w.url)}" target="_blank" rel="noopener">${esc(w.cite)}</a>`:`<span style="color:var(--faint)">${esc(w.cite||"")}</span>`}</div>`).join("")}</div>`:""}</div>`;
+  }).join(""):"";
+  $("notes").innerHTML=(P.notes||[]).length?`<h2>Also changes</h2><ul class="notes">${P.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>`:"";
+}
+
+/* ---------------------------------------------------------------- editor */
+let sel=null;
+const stepper=(path,val,step,chg)=>`<span class="step${chg?" chg":""}"><button data-step="${path}" data-by="${-step}" aria-label="less">−</button><input class="num" data-path="${path}" value="${val}" inputmode="numeric"><button data-step="${path}" data-by="${step}" aria-label="more">+</button></span>`;
+function orig(dk,bi,ii,f){const b=P.days[dk]&&P.days[dk].blocks[bi];if(!b)return undefined;if(ii==null)return b[f];const it=b.items[ii];return it?it[f]:undefined;}
+/* The day as it will run, to scale: colour is work, stripes are rest, grey is moving to the next block. */
+function timeline(d){
+  const seg=[];
+  d.blocks.forEach((b,bi)=>{for(let r=0;r<b.rounds;r++)b.items.forEach((it,ii)=>{
+    seg.push({k:"w"+ii,s:work(it),l:short(it.m)+", set "+(r+1)});
+    const lastOfBlock=r===b.rounds-1&&ii===b.items.length-1;
+    if(!lastOfBlock)seg.push({k:"r",s:+it.rest||0,l:"rest "+(+it.rest||0)+"s"});
+    else if(bi<d.blocks.length-1)seg.push({k:"g",s:+b.next||0,l:"set up the next block, "+(+b.next||0)+"s"});
+  });});
+  const tot=seg.reduce((a,x)=>a+x.s,0)||1;
+  return `<div class="tl">${seg.filter(x=>x.s>0).map(x=>`<i class="${x.k}" style="flex:${x.s}" title="${esc(x.l)}"></i>`).join("")}</div>
+    <div class="tlk"><span><i class="w0"></i>working</span><span><i class="r"></i>resting</span><span><i class="g"></i>next block</span><span style="flex:1"></span><span class="num">${mmss(tot)}</span></div>`;
+}
+/* Every logged set of this exercise, newest session first, coloured against the target being edited. */
+function history(it){
+  const s=S.moves[it.m];
+  if(!s)return `<div class="hist"><div class="hh">No sets logged for this exercise yet.</div></div>`;
+  const u=s.hold?"s":"";
+  const cls=r=>r>it.hi?"over":r>=it.hi?"top":r<it.lo?"under":"in";
+  const fmtD=x=>new Date(x+"T12:00:00").toLocaleDateString("en-CA",{month:"short",day:"numeric"});
+  const rows=s.history.slice().reverse().map(h=>`<div class="hr"><span class="hd">${fmtD(h.date)}</span>${h.sets.map(([r,q])=>`<span class="c ${cls(r)}">${r}${u}${s.hold?"":`<sub>${q>=4?"4+":q}</sub>`}</span>`).join("")}</div>`).join("");
+  return `<div class="hist"><div class="hh">Your log · app asked <b>${esc(M[it.m].reps||(s.lo+"–"+s.hi))}</b> · avg <b>${s.avg}${u}</b> · first set ${s.first} → last ${s.last}</div>${rows}
+    <div class="hk">Small number = reps you said were left. Colour vs the new target: <span class="c under">under</span><span class="c in">inside</span><span class="c top">top</span><span class="c over">past it</span></div></div>`;
+}
+let drawnDay=null; /* not a data-day attribute: the click handler reads those as day cards */
+function renderDrawer(){
+  const dk=sel, dr=$("drawer");
+  if(dk==null){dr.classList.remove("on");$("scrim").classList.remove("on");return;}
+  const d=PLAN[dk], c=CUR[dk], real=S.days[dk];
+  const opts=cur=>Object.keys(M).map(k=>`<option value="${k}"${k===cur?" selected":""}>${esc(M[k].name||k)}</option>`).join("");
+  const ch=(bi,ii,f,v)=>orig(dk,bi,ii,f)!==undefined&&String(orig(dk,bi,ii,f))!==String(v);
+  /* Every edit redraws the panel. Keep the scroll position, or each tap jumps back to the top. */
+  const prevBody=dr.querySelector(".dwb"), keepTop=prevBody&&drawnDay===dk?prevBody.scrollTop:0;
+  drawnDay=dk;
+  const restLabel=(b,ii)=>b.items.length===1?"Rest after each set":ii<b.items.length-1?"Rest, then "+short(b.items[ii+1].m):"Rest, then back to "+short(b.items[0].m);
+  dr.innerHTML=`<div class="dwh"><span class="dk">${DOW[dk]}</span><input data-path="name" value="${esc(d.name)}"><span class="t">${mmss(dayTime(d))}</span><button class="x" data-close aria-label="Close">×</button></div>
+  <div class="dwb">
+    <div class="sub">${c?`Today's version: <b>${mmss(dayTime(c))}</b> on the app clock, you actually take <b>${real?mmss(real.real):"?"}</b>${real?` (avg of ${real.n})`:""}.`:""} New: about <b>${mmss(dayTime(d)*S.ratio)}</b> real.</div>
+    ${timeline(d)}
+    ${d.blocks.map((b,bi)=>`<div class="eb">
+      <div class="ebh"><span class="kind">${b.items.length===1?"Single":b.items.length===2?"Superset":"Triset"}</span><span>Do it</span>${stepper(`${bi}.rounds`,b.rounds,1,ch(bi,null,"rounds",b.rounds))}<span>times</span></div>
+      ${b.items.map((it,ii)=>`<div class="ei">
+        <div class="row"><span class="lt">${b.items.length>1?"ABC"[ii]:""}</span><select data-path="${bi}.${ii}.m" style="flex:1;width:auto">${opts(it.m)}</select></div>
+        <div class="row"><span class="lbl">Target</span>${stepper(`${bi}.${ii}.lo`,it.lo,1,ch(bi,ii,"lo",it.lo))} to ${stepper(`${bi}.${ii}.hi`,it.hi,1,ch(bi,ii,"hi",it.hi))} ${esc(it.unit||((M[it.m]||{}).hold?"s":((M[it.m]||{}).side?"reps per side":"reps")))}</div>
+        <div class="row"><span class="lbl">How</span><input class="how-in" data-path="${bi}.${ii}.how" value="${esc(it.how||"")}" placeholder="tempo, vest…" style="flex:1;width:auto"></div>
+        <div class="row"><span class="lbl">${esc(restLabel(b,ii))}</span>${stepper(`${bi}.${ii}.rest`,it.rest,5,ch(bi,ii,"rest",it.rest))}s</div>
+        <div class="hint">${b.items.length>1?`So ${esc(short(it.m))} waits <b>${restOf(b,ii)}s</b> between its own sets (this rest plus the other exercise${b.items.length>2?"s":""}).`:(M[it.m]||{}).side?`Each arm also rests while the other works: about ${Math.round(work(it)/2)+(+it.rest||0)}s between its sets.`:`Waits <b>${it.rest}s</b> between sets.`}</div>
+        ${history(it)}
+        <div class="row hint"><span>One set${(M[it.m]||{}).side?", both sides,":""} takes about</span>${stepper(`${bi}.${ii}.work`,work(it),5,false)}<span>s (only for the clock)</span><span style="flex:1"></span>${b.items.length>1?`<button class="link del" data-del="${bi}.${ii}">remove</button>`:""}</div>
+      </div>`).join("")}
+      ${bi<d.blocks.length-1?`<div class="row ebf"><span class="lbl">Then, to set up the next block</span>${stepper(`${bi}.next`,b.next,5,ch(bi,null,"next",b.next))}s</div>`:""}
+      <div class="row" style="margin-top:8px">${b.items.length<3?`<button class="link" data-add="${bi}">+ pair an exercise</button>`:""}<span style="flex:1"></span><button class="link del" data-delb="${bi}">remove block</button></div>
+    </div>`).join("")}
+    <button class="link" data-addb>+ new block</button>
+    <textarea data-note rows="3" placeholder="Note on this day for Claude">${esc(NOTES[dk]||"")}</textarea>
+    ${c?`<div class="cmp"><b>Today's version</b><br>${c.blocks.map(b=>esc(blockText(b))).join("<br>")}</div>`:""}
+    <div class="hint">65–90s between sets of the same muscle is the sweet spot. Rest past 90s adds nothing (<a href="https://pubmed.ncbi.nlm.nih.gov/39205815/" target="_blank" rel="noopener" style="color:var(--faint)">Singer 2024</a>).</div>
+    ${dayChanged(dk)?`<button class="link" data-resetday>Reset ${DOW[dk].toLowerCase()} to the proposal</button>`:""}
+  </div>`;
+  dr.querySelector(".dwb").scrollTop=keepTop;
+  dr.classList.add("on");$("scrim").classList.add("on");
+}
+function setPath(path,val){
+  const d=PLAN[sel], p=path.split(".");
+  if(p[0]==="name"){d.name=val;return;}
+  const b=d.blocks[+p[0]];
+  if(p.length===2){b[p[1]]=Math.max(p[1]==="rounds"?1:0,+val||0);return;}
+  const it=b.items[+p[1]], f=p[2];
+  if(f==="m"){it.m=val;delete it.work;const m=M[val]||{};if(m.lo!=null){it.lo=m.lo;it.hi=m.hi;}return;}
+  if(f==="how"){it.how=val;return;}
+  it[f]=Math.max(0,+val||0);
+  if(f==="lo"&&it.hi<it.lo)it.hi=it.lo;
+  if(f==="hi"&&it.lo>it.hi)it.lo=it.hi;
+}
+function refresh(keepFocus){
+  save();renderTop();renderWeek();renderLog();updateSend();
+  if(!keepFocus)renderDrawer();
+}
+document.addEventListener("click",e=>{
+  const t=e.target;
+  const day=t.closest("[data-day]");if(day){sel=day.dataset.day;renderWeek();renderDrawer();return;}
+  if(t.closest("[data-close]")||t.id==="scrim"){sel=null;renderWeek();renderDrawer();return;}
+  if(sel==null)return;
+  const d=PLAN[sel];
+  const st=t.closest("[data-step]");
+  if(st){const path=st.dataset.step, inp=st.parentNode.querySelector("input");setPath(path,(+inp.value||0)+(+st.dataset.by));refresh();return;}
+  if(t.dataset.del){const [bi,ii]=t.dataset.del.split(".").map(Number);d.blocks[bi].items.splice(ii,1);refresh();return;}
+  if(t.dataset.add!=null){d.blocks[+t.dataset.add].items.push({m:"lateral",lo:10,hi:15,how:"",rest:15});refresh();return;}
+  if(t.dataset.delb!=null){d.blocks.splice(+t.dataset.delb,1);if(!d.blocks.length)d.blocks.push({rounds:3,next:0,items:[{m:"lateral",lo:10,hi:15,how:"",rest:30}]});refresh();return;}
+  if(t.hasAttribute("data-addb")){const last=d.blocks[d.blocks.length-1];if(last&&!last.next)last.next=20;d.blocks.push({rounds:3,next:0,items:[{m:"curl",lo:8,hi:12,how:"",rest:15}]});refresh();return;}
+  if(t.hasAttribute("data-resetday")){PLAN[sel]=clone(P.days[sel]);refresh();return;}
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.name&&t.name.startsWith("q-")){ANS[t.name.slice(2)]=t.value;save();updateSend();return;}
+  if(sel==null||!t.dataset.path)return;
+  setPath(t.dataset.path,t.value);refresh();
+});
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.hasAttribute("data-note")){NOTES[sel]=t.value;save();renderWeek();updateSend();}
+  if(t.id==="note"){save();updateSend();t.style.height="auto";t.style.height=Math.min(160,t.scrollHeight)+"px";}
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&sel!=null){sel=null;renderWeek();renderDrawer();}
+  if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();send();}
+});
+
+/* ---------------------------------------------------------------- send */
+function answers(){const a={};(P.questions||[]).forEach(q=>a[q.id]=ANS[q.id]||q.default);return a;}
+function updateSend(){
+  const n=changes().length+Object.values(NOTES).filter(x=>x.trim()).length;
+  const b=$("send");if(b.classList.contains("done"))return;
+  b.innerHTML="Send"+(n?`<b>${n}</b>`:"");
+}
+async function send(){
+  const b=$("send");if(b.disabled)return;
+  b.disabled=true;b.textContent="Sending";
+  const body={note:$("note").value.trim(),dayNotes:NOTES,answers:answers(),changes:changes(),plan:PLAN};
+  try{
+    const r=await fetch("/",{method:"POST",body:JSON.stringify(body)});
+    if(!r.ok)throw new Error(r.status);
+    SENT=true;b.classList.add("done");b.textContent="Sent to Claude";
+    try{localStorage.removeItem(KEY);}catch(e){}
+  }catch(e){
+    b.disabled=false;b.textContent="Retry";
+  }
+}
+$("send").addEventListener("click",send);
+$("reset").addEventListener("click",()=>{if(!confirm("Drop every edit and note?"))return;PLAN=clone(P.days);NOTES={};ANS={};$("note").value="";refresh();renderQs();});
+
+renderTop();renderWeek();renderLog();renderQs();updateSend();
+</script>
+</body>
+</html>

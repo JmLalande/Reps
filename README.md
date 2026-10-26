@@ -14,6 +14,10 @@ personal records all read from it.
 `milestones.js` is the streak bank. `DAYS` is keyed to an exact day count, `POOL`
 is the fallback that never repeats, `BREAKS` is what shows when a streak ends.
 
+## Reworking the routine
+
+`python3 planner/plan.py` opens a local page with the proposed week next to the current one and what the log says about every exercise. It reads the live `program.js`, the newest Reps export (pulled from the phone over adb, else `~/Downloads`, or `--export FILE`), and the newest proposal in `planner/proposals/`. Tap a day to edit it; the time, rest and rule checks follow. **Send** writes `planner/sent/<date>.json` (not committed) and prints the edits and notes, then the server stops. A new rework starts with a new proposal file, same shape as the last one.
+
 ## How it behaves
 
 - A day counts toward the streak as soon as **one set** is logged. Lower the floor.
@@ -22,9 +26,10 @@ is the fallback that never repeats, `BREAKS` is what shows when a streak ends.
   overtime until you tap. Rest auto-advances, with a double low beep ten seconds out, four ticks on the beat and a tone at zero.
 - Tapping anywhere ends the current phase and **shifts the entire remaining
   schedule**, so finishing early or late reflows the projected finish time.
-- Weeks 1-2 hold you to 3-4 reps in reserve on purpose. Week 3 the rule changes.
-- Hit the top of a rep range twice running and it tells you to move up, and names
-  the next rung on the ladder.
+- Weeks 1-2 hold you to 3-4 reps in reserve on purpose: Easy is the target then. Week 3 the rule changes.
+- Most of the week runs in **supersets**: two movements that share no muscle, alternated (1A, 1B, 1A…). Each movement's rest is the pause after it, so the other movement is the real rest. A rest under twelve seconds gets the countdown but not the ten-second double beep.
+- After a rep set, one tap: **Failed**, **On target** (1–2 left) or **Easy** (3+ left). Holds only ask to be saved. A set done one side at a time asks once for both sides. Stored as 0, 2 and 3, so older 0–4 entries still read the same.
+- At the end, one **1–10 rating for the whole session** (`srpe` in the export): the hard-day signal a single set can't carry.
 
 ## Freezes
 

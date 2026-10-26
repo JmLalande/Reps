@@ -1,0 +1,417 @@
+{
+ "title": "Supersets",
+ "date": "2026-10-26",
+ "summary": "Same muscles, same sets, done in pairs that don't compete. One exercise is the other's rest.",
+ "days": {
+  "1": {
+   "name": "Press & arms",
+   "blocks": [
+    {
+     "rounds": 4,
+     "next": 20,
+     "items": [
+      {
+       "m": "press",
+       "lo": 7,
+       "hi": 10,
+       "how": "3s down",
+       "work": 80,
+       "rest": 30
+      }
+     ]
+    },
+    {
+     "rounds": 3,
+     "next": 0,
+     "items": [
+      {
+       "m": "ohext",
+       "lo": 12,
+       "hi": 16,
+       "how": "3s down",
+       "work": 65,
+       "rest": 10
+      },
+      {
+       "m": "lateral",
+       "lo": 8,
+       "hi": 12,
+       "how": "",
+       "rest": 10,
+       "work": 35
+      }
+     ]
+    }
+   ]
+  },
+  "2": {
+   "name": "Chest & arms",
+   "blocks": [
+    {
+     "rounds": 3,
+     "next": 60,
+     "items": [
+      {
+       "m": "dip",
+       "lo": 10,
+       "hi": 15,
+       "how": "vest on",
+       "work": 40,
+       "rest": 10
+      },
+      {
+       "m": "curl",
+       "lo": 10,
+       "hi": 15,
+       "how": "2s pause halfway, 3s down",
+       "work": 90,
+       "rest": 10
+      }
+     ]
+    },
+    {
+     "rounds": 3,
+     "next": 0,
+     "items": [
+      {
+       "m": "pushup",
+       "lo": 10,
+       "hi": 15,
+       "how": "",
+       "rest": 15
+      },
+      {
+       "m": "reardelt",
+       "lo": 12,
+       "hi": 15,
+       "how": "",
+       "work": 40,
+       "rest": 15
+      }
+     ]
+    }
+   ]
+  },
+  "3": {
+   "name": "Press & arms",
+   "blocks": [
+    {
+     "rounds": 4,
+     "next": 20,
+     "items": [
+      {
+       "m": "press",
+       "lo": 7,
+       "hi": 10,
+       "how": "3s down",
+       "work": 80,
+       "rest": 30
+      }
+     ]
+    },
+    {
+     "rounds": 3,
+     "next": 0,
+     "items": [
+      {
+       "m": "ohext",
+       "lo": 12,
+       "hi": 16,
+       "how": "3s down",
+       "work": 65,
+       "rest": 10
+      },
+      {
+       "m": "lateral",
+       "lo": 8,
+       "hi": 12,
+       "how": "",
+       "rest": 10,
+       "work": 35
+      }
+     ]
+    }
+   ]
+  },
+  "4": {
+   "name": "Chest & arms",
+   "blocks": [
+    {
+     "rounds": 3,
+     "next": 60,
+     "items": [
+      {
+       "m": "dip",
+       "lo": 10,
+       "hi": 15,
+       "how": "vest on",
+       "work": 40,
+       "rest": 10
+      },
+      {
+       "m": "curl",
+       "lo": 10,
+       "hi": 15,
+       "how": "2s pause halfway, 3s down",
+       "work": 90,
+       "rest": 10
+      }
+     ]
+    },
+    {
+     "rounds": 3,
+     "next": 0,
+     "items": [
+      {
+       "m": "pushup",
+       "lo": 10,
+       "hi": 15,
+       "how": "",
+       "rest": 15
+      },
+      {
+       "m": "reardelt",
+       "lo": 12,
+       "hi": 15,
+       "how": "",
+       "work": 40,
+       "rest": 15
+      }
+     ]
+    }
+   ]
+  },
+  "5": {
+   "name": "Press & arms",
+   "blocks": [
+    {
+     "rounds": 4,
+     "next": 20,
+     "items": [
+      {
+       "m": "press",
+       "lo": 7,
+       "hi": 10,
+       "how": "3s down",
+       "work": 80,
+       "rest": 30
+      }
+     ]
+    },
+    {
+     "rounds": 3,
+     "next": 0,
+     "items": [
+      {
+       "m": "ohext",
+       "lo": 12,
+       "hi": 16,
+       "how": "3s down",
+       "work": 65,
+       "rest": 10
+      },
+      {
+       "m": "lateral",
+       "lo": 8,
+       "hi": 12,
+       "how": "",
+       "rest": 10,
+       "work": 35
+      }
+     ]
+    }
+   ]
+  },
+  "6": {
+   "name": "Tendon",
+   "blocks": [
+    {
+     "rounds": 3,
+     "next": 40,
+     "items": [
+      {
+       "m": "doorpress",
+       "lo": 4,
+       "hi": 4,
+       "how": "max effort",
+       "rest": 10,
+       "unit": " × 3s"
+      },
+      {
+       "m": "curl",
+       "lo": 10,
+       "hi": 15,
+       "how": "2s pause halfway, 3s down",
+       "work": 90,
+       "rest": 10
+      }
+     ]
+    },
+    {
+     "rounds": 3,
+     "next": 0,
+     "items": [
+      {
+       "m": "bss",
+       "lo": 8,
+       "hi": 12,
+       "how": "back foot on the step, bell held at the chest",
+       "rest": 60,
+       "work": 85
+      }
+     ]
+    }
+   ]
+  },
+  "0": {
+   "name": "Push & jump",
+   "blocks": [
+    {
+     "rounds": 4,
+     "next": 45,
+     "items": [
+      {
+       "m": "pushup",
+       "lo": 10,
+       "hi": 15,
+       "how": "",
+       "rest": 15
+      },
+      {
+       "m": "reardelt",
+       "lo": 12,
+       "hi": 15,
+       "how": "",
+       "work": 40,
+       "rest": 15
+      }
+     ]
+    },
+    {
+     "rounds": 4,
+     "next": 0,
+     "items": [
+      {
+       "m": "swing",
+       "lo": 12,
+       "hi": 15,
+       "how": "30s, every rep as hard and fast as you can",
+       "work": 30,
+       "rest": 10
+      },
+      {
+       "m": "calfraise",
+       "lo": 8,
+       "hi": 10,
+       "how": "edge of a step, 3s down, bell in hand",
+       "rest": 10
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "context": {
+  "1": "volleyball",
+  "3": "volleyball",
+  "4": "climbing"
+ },
+ "rules": {
+  "noBackToBack": [
+   "press",
+   "dip",
+   "pushup",
+   "curl",
+   "ohext"
+  ],
+  "notSameDay": [
+   [
+    "ohext",
+    "pushup"
+   ],
+   [
+    "ohext",
+    "dip"
+   ]
+  ],
+  "maxMinutes": 12
+ },
+ "questions": [
+  {
+   "id": "effort",
+   "title": "How should a set's effort be logged?",
+   "default": "three",
+   "options": [
+    {
+     "value": "keep",
+     "label": "0 · 1 · 2 · 3 · 4+",
+     "desc": "What you have now, after every set."
+    },
+    {
+     "value": "four",
+     "label": "0 · 1 · 2 · 3+",
+     "desc": "Your idea. Still asks 1 vs 2, inside the guessing error."
+    },
+    {
+     "value": "three",
+     "label": "Failed · On target · Easy",
+     "desc": "Preset on target, so most sets need no tap. Holds skip it. Plus one 1–10 rating for the day.",
+     "rec": true
+    },
+    {
+     "value": "last",
+     "label": "Last set only",
+     "desc": "The same three taps once per exercise, plus the day rating. You lose the set-by-set fade."
+    }
+   ],
+   "why": [
+    {
+     "stat": "±1 rep",
+     "text": "How far off people are when guessing reps left. Worse far from failure and above 12 reps.",
+     "cite": "Halperin 2022",
+     "url": "https://pubmed.ncbi.nlm.nih.gov/34542869/"
+    },
+    {
+     "stat": "44%",
+     "text": "of your logged sets say 4+, the least reliable answer.",
+     "cite": "your export"
+    },
+    {
+     "stat": "near vs far",
+     "text": "Growth tracks how close to failure, not the exact number.",
+     "cite": "Robinson 2024",
+     "url": "https://pubmed.ncbi.nlm.nih.gov/38970765/"
+    },
+    {
+     "stat": "1–10",
+     "text": "One rating for the whole session captures a mentally hard day.",
+     "cite": "Haddad 2017",
+     "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5673663/"
+    }
+   ]
+  }
+ ],
+ "notes": [
+  "Move-up prompt removed from the Today screen.",
+  "No heavier bell: press, curl and overhead extension get harder by going slower.",
+  "Max-effort volleyball approaches (2 × 3) happen at volleyball warm-up on Mon and Wed, outside the app."
+ ],
+ "moves": {
+  "bss": {
+   "name": "Bulgarian split squat",
+   "short": "Bulgarian SS",
+   "work": 75,
+   "side": true,
+   "lo": 6,
+   "hi": 10
+  },
+  "calfraise": {
+   "name": "Single-leg calf raise",
+   "short": "Calf raise",
+   "work": 80,
+   "side": true,
+   "lo": 8,
+   "hi": 10
+  }
+ }
+}
