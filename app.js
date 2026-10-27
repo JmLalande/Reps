@@ -21,7 +21,7 @@ function del(store,key){return new Promise((res,rej)=>{const q=tx(store,"readwri
   q.onsuccess=()=>res();q.onerror=()=>rej(q.error);});}
 
 /* ------------------------------------------------------------------ state */
-let SESSIONS={}, META={k:"app",poolSeen:[],lastBreak:-1,sound:true,vol:1,firstDay:null,lastStreak:0,facts:null}, WEIGHTS=[], FREEZES={};
+let SESSIONS={}, META={k:"app",poolSeen:[],sound:true,vol:1,firstDay:null,facts:null}, WEIGHTS=[], FREEZES={};
 const $=id=>document.getElementById(id);
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 /* The day ends at 4 in the morning, not at midnight. A session at 2am after a
@@ -45,7 +45,7 @@ const upn=s=>clock(s,Math.floor);
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v30";
+const APP_VERSION="v31";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -54,12 +54,26 @@ const setCount=a=>new Set((a||[]).map(x=>x.m+"#"+x.set)).size;
    toward the number on screen, so the streak reads as sessions done and the
    milestone keyed to it stays true. */
 const held=k=>qualifies(SESSIONS[k])||!!FREEZES[k];
-function computeStreak(){
-  let n=0,d=appNow();
-  if(!held(iso(d)))d.setDate(d.getDate()-1);
-  while(held(iso(d))){if(qualifies(SESSIONS[iso(d)]))n++;d.setDate(d.getDate()-1);}
-  return n;
+/* A break costs two, not the whole count. Back to zero after twenty days is a
+   reason to quit; eighteen is a reason to come back tomorrow. So the number is
+   rebuilt from the first session forward: a trained day adds one, a frozen day
+   holds, and each missed day takes two off, never below zero. Today is not
+   missed until it is over. `broke` is the break still open and what it has
+   cost so far, frozen days inside it included, so the home screen can say so
+   until the next session. */
+const BREAK_COST=2;
+function streakState(today=todayISO()){
+  const first=Object.keys(SESSIONS).filter(k=>qualifies(SESSIONS[k])).sort()[0];
+  let n=0,breaks=0,broke=null;
+  if(!first)return {n,breaks,broke};
+  for(let d=new Date(first+"T12:00:00"),k=first;k<=today;d.setDate(d.getDate()+1),k=iso(d)){
+    if(qualifies(SESSIONS[k])){n++;broke=null;}
+    else if(!FREEZES[k]&&k<today){if(!broke){broke={from:n};breaks++;}n=Math.max(0,n-BREAK_COST);}
+  }
+  if(broke)broke.cost=broke.from-n;
+  return {n,breaks,broke};
 }
+const computeStreak=()=>streakState().n;
 
 /* The budget is derived from the dates, never stored. The Monday of the week a
    day falls in names that week, so a freeze always bills the week it sits in. */
@@ -68,30 +82,36 @@ const freezesIn=w=>Object.keys(FREEZES).filter(k=>weekOf(k)===w).length;
 const freezesLeft=()=>Math.max(0,FREEZES_PER_WEEK-freezesIn(weekOf(todayISO())));
 
 /* The days between the last day you held and yesterday. Today is never in here:
-   today is not missed until it is over. The longest gap that can ever be covered
-   is the tail of one week and the head of the next. */
+   today is not missed until it is over. */
 function openGap(){
-  if(!Object.values(SESSIONS).some(qualifies))return [];
+  const first=Object.keys(SESSIONS).filter(k=>qualifies(SESSIONS[k])).sort()[0];
+  if(!first)return [];
   const gap=[],d=appNow();d.setDate(d.getDate()-1);
-  while(gap.length<=2*FREEZES_PER_WEEK&&!held(iso(d))){gap.push(iso(d));d.setDate(d.getDate()-1);}
-  return held(iso(d))?gap:null;   /* null means the gap runs off the end, too long to cover */
+  while(iso(d)>first&&!held(iso(d))){gap.unshift(iso(d));d.setDate(d.getDate()-1);}
+  return gap;
 }
 async function spendFreeze(date,auto){
   const rec={date,auto:!!auto};
   FREEZES[date]=rec;await put("freezes",rec);
 }
+/* Freezes that cannot keep the count above zero save nothing. Keep them for
+   the week you come back instead. */
+function worthCovering(gap,covered){
+  if(!gap.length)return false;
+  const d=new Date(gap[0]+"T12:00:00");d.setDate(d.getDate()-1);
+  return streakState(iso(d)).n-BREAK_COST*(gap.length-covered)>0;
+}
+
 /* Nothing runs at midnight in a page that is closed, so a missed day is only
-   found when you open the app again. Cover the whole gap or none of it, each
-   day out of its own week's budget. Half a gap covered still breaks the streak
-   and burns a freeze you could have used later. */
+   found when you open the app again. Every missed day costs two, so each day
+   of the gap takes a freeze if its own week still has one, oldest day first.
+   Keeping one for later would save the same two, and freezes do not carry over. */
 async function autoCover(){
-  const gap=openGap();
-  if(!gap||!gap.length)return 0;
-  const need={};
-  for(const k of gap)need[weekOf(k)]=(need[weekOf(k)]||0)+1;
-  if(Object.keys(need).some(w=>need[w]>FREEZES_PER_WEEK-freezesIn(w)))return 0;
-  for(const k of gap)await spendFreeze(k,true);
-  return gap.length;
+  const gap=openGap(), left={};
+  const cover=gap.filter(k=>{const w=weekOf(k);if(!(w in left))left[w]=FREEZES_PER_WEEK-freezesIn(w);return left[w]-->0;});
+  if(!worthCovering(gap,cover.length))cover.length=0;
+  for(const k of cover)await spendFreeze(k,true);
+  return {covered:cover.length,missed:gap.length};
 }
 function daysSinceStart(){
   if(!META.firstDay)return 0;
@@ -149,7 +169,7 @@ function renderToday(){
   const now=appNow(), dk=now.getDay(), day=WEEK[dk];
   $("todayDate").textContent=DOW[dk]+" · "+now.toLocaleDateString(undefined,{month:"long",day:"numeric"});
   $("todayName").textContent=day.name;
-  const streak=computeStreak();
+  const st=streakState(), streak=st.n;
   $("streakN").textContent=streak;
   $("streakN").classList.toggle("zero",streak===0);
 
@@ -158,14 +178,14 @@ function renderToday(){
   /* The day you are on, never the day after. The fact is the reward for having
      got here, and it is handed over first on the done screen at the end of the
      session that earned it. Showing tomorrow's here spoiled that. */
-  if(streak>0){
+  if(st.broke&&st.broke.cost>1){
+    msEl.textContent="−"+st.broke.cost+". "+breakMessage(st.breaks);
+    msEl.style.display="block";
+  }else if(streak>0){
     const f=dayFacts(streak);
     msEl.textContent=f.text;
     msEl.style.display="block";
     showBonus(bnEl,f.bonus);
-  }else if(META.lastStreak>1){
-    msEl.textContent=breakMessage(META.lastBreak).text;
-    msEl.style.display="block";
   }else{ msEl.style.display="none"; }
 
   const or=$("onramp");
@@ -232,7 +252,6 @@ async function toggleFreeze(){
     await spendFreeze(today,false);
     toast("Today is frozen. Tomorrow is "+WEEK[(appNow().getDay()+1)%7].name+".");
   }
-  META.lastStreak=computeStreak();await put("meta",META);
   renderToday();renderHistory();renderStats();
 }
 
@@ -934,9 +953,6 @@ async function saveSession(complete,actual){
      for a day you showed up for. */
   if(FREEZES[date]){delete FREEZES[date];await del("freezes",date);}
   if(!META.firstDay){META.firstDay=date;}
-  const st=computeStreak();
-  if(st===0&&META.lastStreak>1){META.lastBreak=breakMessage(META.lastBreak).index;}
-  META.lastStreak=st;
   await put("sessions",rec);await put("meta",META);
 }
 /* Pausing and quitting are the same act here: the sets are already saved, the
@@ -1031,7 +1047,6 @@ async function persistEdit(){
   const s=SESSIONS[edDate];
   s.complete=s.complete&&s.sets.length>0;
   await put("sessions",s);
-  META.lastStreak=computeStreak(); await put("meta",META);
   renderToday();renderHistory();renderStats();
 }
 $("edAdd").addEventListener("click",async()=>{
@@ -1046,7 +1061,6 @@ $("edDel").addEventListener("click",async()=>{
   const d=edDate;
   delete SESSIONS[d];
   await del("sessions",d);
-  META.lastStreak=computeStreak(); await put("meta",META);
   $("editor").classList.remove("on"); edDate=null;
   renderToday();renderHistory();renderStats();toast("Session deleted");
 });
@@ -1212,11 +1226,11 @@ async function load(){
   WEIGHTS=await all("weights");
   /* Before the first render, or you see a broken streak that the freeze you
      are owed was about to save. */
-  const covered=await autoCover();
-  META.lastStreak=computeStreak();await put("meta",META);
+  const {covered,missed}=await autoCover();
   $("verNote").textContent=APP_VERSION;
   renderToday();renderRoutine();renderHistory();renderStats();
-  if(covered)toast(covered===1?"A freeze covered yesterday":covered+" freezes covered the days you missed");
+  if(covered)toast(covered<missed?(covered===1?"A freeze":"Freezes")+" covered "+covered+" of the "+missed+" days you missed":
+    covered===1?"A freeze covered yesterday":covered+" freezes covered the days you missed");
 }
 open().then(load).catch(()=>{toast("This browser will not let the app save anything");renderToday();renderRoutine();});
 if("serviceWorker" in navigator)addEventListener("load",async()=>{

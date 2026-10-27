@@ -232,20 +232,21 @@ const POOL = [
   "The deepest a human has free-dived is 214 m. The lungs compress to about the size of a fist and refill on the way up."
 ];
 
-/* Never the same one twice in a row. Stored index prevents repeats. */
+/* Shown after a break, after what it cost (−8). Picked by how many breaks
+   there have been, so never the same one twice in a row. */
 const BREAKS = [
-  "Reset to zero. So did the Large Hadron Collider, nine days after switch-on, when one bad solder joint cost it fourteen months. It later found the Higgs.",
-  "Streak gone. Voyager 2 went silent for two weeks in 2020 because the only antenna on Earth that can reach it was pointed elsewhere for repairs. It is still transmitting.",
-  "Back to day zero. Entropy is undefeated over long enough timescales. The trick has always been to keep running the experiment.",
-  "Broken. The Wright brothers crashed on 14 December 1903 and flew successfully three days later.",
-  "Zero again. Apollo 13 lost an oxygen tank 320,000 km from home and everyone came back alive. Losing the plan is not the same as losing.",
-  "Streak over. Edison's team tested thousands of filament materials. The useful summary is that the ones that failed were still data.",
-  "Reset. Shackleton's ship was crushed by ice in 1915 and the expedition became a rescue. Every one of the 28 men survived.",
-  "Back to nothing. The Mars Climate Orbiter was lost in 1999 because one team used pounds and the other newtons. NASA kept going to Mars.",
-  "Streak's done. Roger Bannister failed at the four-minute mile for two years before the day it worked.",
-  "Zero. Continental drift was ridiculed for fifty years before the seafloor data made it obvious. Being early and being wrong look identical from inside.",
-  "Broken. The first four Falcon 1 launches were failures and the company had money for exactly one more.",
-  "Reset. Darwin sat on the theory for twenty years. Starting again is cheaper than that."
+  "The Large Hadron Collider stopped nine days after switch-on, when one bad solder joint cost it fourteen months. It later found the Higgs.",
+  "Voyager 2 went silent for two weeks in 2020 because the only antenna on Earth that can reach it was pointed elsewhere for repairs. It is still transmitting.",
+  "Entropy is undefeated over long enough timescales. The trick has always been to keep running the experiment.",
+  "The Wright brothers crashed on 14 December 1903 and flew successfully three days later.",
+  "Apollo 13 lost an oxygen tank 320,000 km from home and everyone came back alive. Losing the plan is not the same as losing.",
+  "Edison's team tested thousands of filament materials. The useful summary is that the ones that failed were still data.",
+  "Shackleton's ship was crushed by ice in 1915 and the expedition became a rescue. Every one of the 28 men survived.",
+  "The Mars Climate Orbiter was lost in 1999 because one team used pounds and the other newtons. NASA kept going to Mars.",
+  "Roger Bannister failed at the four-minute mile for two years before the day it worked.",
+  "Continental drift was ridiculed for fifty years before the seafloor data made it obvious. Being early and being wrong look identical from inside.",
+  "The first four Falcon 1 launches were failures and the company had money for exactly one more.",
+  "Darwin sat on the theory for twenty years. Picking it back up is cheaper than that."
 ];
 
 /* Spread the picks across the pool instead of walking it in order. 7919 is
@@ -274,7 +275,6 @@ function bonusFor(day, seenPool, skipIndex){
   return {text: POOL[pick], poolIndex: pick};
 }
 
-function breakMessage(lastIndex){
-  let i = (typeof lastIndex === "number" ? lastIndex + 1 : 0) % BREAKS.length;
-  return {text: BREAKS[i], index: i};
+function breakMessage(n){
+  return BREAKS[n % BREAKS.length];
 }

@@ -9,7 +9,7 @@ Live: https://jmlalande.github.io/Reps/
 Everything about the training lives in `program.js` — movements, the week, rest periods, rep ranges, the cues shown on screen. Change it there and the whole app follows: the session engine, the routine page and the Progress tab all read from it.
 
 `milestones.js` is the streak bank. `DAYS` is keyed to an exact day count, `POOL`
-is the fallback that never repeats, `BREAKS` is what shows when a streak ends.
+is the fallback that never repeats, `BREAKS` is what shows after a break, until you train again.
 
 ## Reworking the routine
 
@@ -31,6 +31,8 @@ is the fallback that never repeats, `BREAKS` is what shows when a streak ends.
 ## Freezes
 
 One freeze a week, Monday to Sunday, and it never carries over. A frozen day holds the streak without counting toward it, so the number on screen stays a count of sessions done.
+
+A missed day the freeze can't cover costs the streak two, never below zero, and never resets it. A gap found on opening the app takes each week's freeze if it is still there, oldest day first.
 
 A freeze skips that day's workout. Nothing slides: the week is keyed to the calendar, so the day after a freeze is still that day's workout. This is where Reps differs from Loop, whose cycle stands still on a frozen day.
 
