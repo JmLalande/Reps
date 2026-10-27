@@ -45,7 +45,7 @@ const upn=s=>clock(s,Math.floor);
 function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("on");
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),2600);}
 
-const APP_VERSION="v29";
+const APP_VERSION="v30";
 const qualifies=s=>!!(s&&s.sets&&s.sets.length>=1);
 /* A movement done one side at a time writes a row per side, so a row is not a
    set. Everything that counts sets out loud counts them this way. */
@@ -336,27 +336,68 @@ function statsHead(S,today){
   $("pgLife").innerHTML="<div><b>"+S.length+"</b><span>sessions</span></div><div><b>"+hmin(secsIn(S))+"</b><span>trained</span></div><div><b>"+repsIn(S).toLocaleString("en-CA")+"</b><span>reps</span></div>";
 }
 
-/* Last full month in a few facts: the card worth a screenshot. */
+/* A month in a few facts: the card worth a screenshot. It opens on this month,
+   and the arrows (or a swipe) walk back one month at a time, as far as the
+   month of your first session. */
+let RECAP_BACK=0;
 function statsRecap(S,today){
-  const d0=dOf(today);d0.setDate(1);d0.setMonth(d0.getMonth()-1);const ym=iso(d0).slice(0,7);
+  const first=dOf(S[0].date),now=dOf(today);
+  const maxBack=(now.getFullYear()-first.getFullYear())*12+now.getMonth()-first.getMonth();
+  RECAP_BACK=Math.min(Math.max(0,RECAP_BACK),maxBack);
+  const d0=dOf(today);d0.setDate(1);d0.setMonth(d0.getMonth()-RECAP_BACK);const ym=iso(d0).slice(0,7);
   const MS=S.filter(s=>s.date.startsWith(ym));
-  $("pgRecap").hidden=!MS.length;if(!MS.length)return;
+  const firstMonth=RECAP_BACK===maxBack&&maxBack>0;
+  const kick=(RECAP_BACK===0?"This month":RECAP_BACK===1?"Last month":RECAP_BACK+" months ago")+(firstMonth?" · your first":"");
+  const head="<div class='rhead'><div aria-live='polite'><span class='kick'>"+kick+"</span><h2>"+monthOf(ym+"-15")+(d0.getFullYear()!==now.getFullYear()?" "+d0.getFullYear():"")+"</h2></div>"+
+    "<button class='rnav' data-mo='1' aria-label='"+(RECAP_BACK>=maxBack?"No earlier sessions":"Previous month")+"'"+(RECAP_BACK>=maxBack?" disabled":"")+">‹</button>"+
+    "<button class='rnav' data-mo='-1' aria-label='Next month'"+(RECAP_BACK===0?" disabled":"")+">›</button></div>";
+  $("pgRecap").hidden=false;
   let longest=0,r=0,prev=null;
   MS.forEach(s=>{r=prev&&gapD(prev,s.date)===1?r+1:1;longest=Math.max(longest,r);prev=s.date;});
   const dow=[0,0,0,0,0,0,0];MS.forEach(s=>dow[dOf(s.date).getDay()]++);
   const hrs=new Array(24).fill(0);MS.forEach(s=>{if(s.startedAt)hrs[new Date(s.startedAt).getHours()]++;});
   const per={};MS.forEach(s=>(s.sets||[]).forEach(x=>{if(M[x.m])per[x.m]=(per[x.m]||0)+(x.reps||0);}));
   const top=Object.entries(per).sort((a,b)=>b[1]-a[1])[0];
-  $("pgRecap").innerHTML="<span class='kick'>Last month</span><h2>"+monthOf(ym+"-15")+", in Reps</h2><div class='facts'>"+
+  /* Every month shows the same grid, a dash where there is nothing to say, so
+     stepping through months never makes the page below jump. */
+  $("pgRecap").innerHTML=head+"<div class='facts'>"+
     "<div><span>Sessions</span><b>"+MS.length+"</b></div>"+
-    "<div><span>Trained</span><b>"+hmin(secsIn(MS))+"</b></div>"+
+    "<div><span>Trained</span><b>"+(MS.length?hmin(secsIn(MS)):"–")+"</b></div>"+
     "<div><span>Reps</span><b>"+repsIn(MS).toLocaleString("en-CA")+"</b></div>"+
-    "<div><span>Longest run</span><b>"+longest+(longest===1?" day":" days")+"</b></div>"+
-    (hrs.some(Boolean)?"<div><span>Usual start</span><b>"+hrs.indexOf(Math.max(...hrs))+":00</b></div>":"")+
-    "<div><span>Most loyal</span><b>"+DAYS_PL[dow.indexOf(Math.max(...dow))]+"</b></div>"+
-    (top?"<div class='wide'><span>Most reps</span><b>"+top[1].toLocaleString("en-CA")+" · "+(M[top[0]].short||M[top[0]].name)+"</b></div>":"")+
+    "<div><span>Longest run</span><b>"+(longest?longest+(longest===1?" day":" days"):"–")+"</b></div>"+
+    "<div><span>Usual start</span><b>"+(hrs.some(Boolean)?hrs.indexOf(Math.max(...hrs))+":00":"–")+"</b></div>"+
+    "<div><span>Most loyal</span><b>"+(MS.length?DAYS_PL[dow.indexOf(Math.max(...dow))]:"–")+"</b></div>"+
+    "<div class='wide'><span>Most reps</span><b>"+(top?top[1].toLocaleString("en-CA")+" · "+(M[top[0]].short||M[top[0]].name):"–")+"</b></div>"+
     "</div>";
 }
+/* Only the card re-renders, so a button keeps the focus it had. The new month
+   slides in from the side it came from, unless reduced motion is on. */
+function recapStep(n,fromKey){
+  const S=Object.values(SESSIONS).filter(qualifies).sort((a,b)=>a.date.localeCompare(b.date));
+  RECAP_BACK+=n;statsRecap(S,todayISO());
+  const card=$("pgRecap");
+  card.classList.remove("in-l","in-r");void card.offsetWidth;card.classList.add(n>0?"in-l":"in-r");
+  if(fromKey){const b=card.querySelector("[data-mo='"+n+"']"),o=card.querySelector("[data-mo='"+(-n)+"']");(b.disabled?o:b).focus();}
+}
+$("pgRecap").addEventListener("click",e=>{const b=e.target.closest("[data-mo]");if(b&&!b.disabled)recapStep(+b.dataset.mo,true);});
+/* Swipe right for the month before, left to come back, like turning pages.
+   The card follows the finger a little so the gesture shows it was heard. */
+let swipe=null;
+$("pgRecap").addEventListener("pointerdown",e=>{if(e.target.closest("[data-mo]"))return;swipe={x:e.clientX,y:e.clientY};});
+$("pgRecap").addEventListener("pointermove",e=>{
+  if(!swipe)return;const dx=e.clientX-swipe.x;
+  if(Math.abs(dx)>8)$("pgRecap").style.transform="translateX("+Math.max(-40,Math.min(40,dx*.35))+"px)";
+});
+function swipeEnd(e){
+  if(!swipe)return;const dx=e.clientX-swipe.x,dy=e.clientY-swipe.y;swipe=null;
+  $("pgRecap").style.transform="";
+  if(e.type!=="pointerup"||Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.5)return;
+  const b=$("pgRecap").querySelector("[data-mo='"+(dx>0?1:-1)+"']");
+  if(b&&!b.disabled)recapStep(dx>0?1:-1,false);
+}
+$("pgRecap").addEventListener("pointerup",swipeEnd);
+$("pgRecap").addEventListener("pointercancel",swipeEnd);
+$("pgRecap").addEventListener("pointerleave",swipeEnd);
 
 /* The last few weeks, day by day, and how many weeks in a row held. */
 function statsWeeks(S,today){
@@ -1042,7 +1083,7 @@ document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("on"));
   $("p-"+b.dataset.go).classList.add("on");
   if(b.dataset.go==="history")renderHistory();
-  if(b.dataset.go==="stats")renderStats();
+  if(b.dataset.go==="stats"){RECAP_BACK=0;renderStats();}
   scrollTo(0,0);
 }));
 $("calPrev").addEventListener("click",()=>{calCursor.setMonth(calCursor.getMonth()-1);renderHistory();});

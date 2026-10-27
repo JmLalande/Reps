@@ -287,8 +287,19 @@ details.cue b{color:var(--pale);font-weight:500}
 .life b{display:block;font-size:22px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .life span{color:var(--dim);font-size:11.5px}
 .recap{background:linear-gradient(160deg,rgba(255,138,76,.22),rgba(255,138,76,.04) 55%),var(--panel)!important;border-color:rgba(255,138,76,.25)!important}
+.recap{touch-action:pan-y;transition:transform .18s ease-out}
+.recap .rhead{user-select:none;-webkit-user-select:none}
+.recap.in-l .facts,.recap.in-l h2{animation:recapL .22s ease-out}
+.recap.in-r .facts,.recap.in-r h2{animation:recapR .22s ease-out}
+@keyframes recapL{from{opacity:0;transform:translateX(-18px)}}
+@keyframes recapR{from{opacity:0;transform:translateX(18px)}}
+@media (prefers-reduced-motion:reduce){.recap{transition:none}.recap.in-l .facts,.recap.in-l h2,.recap.in-r .facts,.recap.in-r h2{animation:none}}
 .recap .kick{color:var(--acc)}
-.recap h2{font-size:20px;margin:2px 0 12px}
+.recap h2{font-size:20px;margin:2px 0 0}
+.recap .rhead{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.recap .rhead>div{flex:1;min-width:0}
+.recap .rnav{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.07);color:var(--pale);font-size:22px;line-height:1;display:grid;place-items:center;padding-bottom:3px}
+.recap .rnav:disabled{opacity:.25;cursor:default}
 .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 10px}
 .facts span{display:block;color:var(--dim);font-size:11.5px}
 .facts b{font-size:16px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
