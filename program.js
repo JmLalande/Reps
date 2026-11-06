@@ -64,15 +64,15 @@ const DEFAULT_RIR = [1,2], ONRAMP_RIR = [3,4];
    No heavier bell, so the press, curl and overhead extension get harder by going
    slower. The tempo is in `how`, and it is why their `work` is longer. */
 const PRESS_DAY = {name:"Press & arms", rir:[1,2], blocks:[
-  {rounds:4, next:20, items:[{m:"press", lo:7, hi:10, how:"3s down", work:80, rest:30}]},
-  {rounds:3, items:[{m:"ohext", lo:12, hi:16, how:"3s down", work:65, rest:10},
-                    {m:"lateral", lo:8, hi:12, work:35, rest:10}]}
+  {rounds:4, next:30, items:[{m:"press", lo:7, hi:10, how:"3s down", work:80, rest:30}]},
+  {rounds:3, items:[{m:"ohext", lo:12, hi:16, how:"3s down", work:65, rest:20},
+                    {m:"lateral", lo:8, hi:12, work:35, rest:20}]}
 ]};
 const CHEST_DAY = {name:"Chest & arms", rir:[1,2], blocks:[
-  {rounds:3, next:60, items:[{m:"dip", lo:10, hi:15, how:"vest on", work:40, rest:10},
-                             {m:"curl", lo:10, hi:15, how:"2s pause halfway, 3s down", work:90, rest:10}]},
-  {rounds:3, items:[{m:"pushup", lo:10, hi:15, rest:15},
-                    {m:"reardelt", lo:12, hi:15, work:40, rest:15}]}
+  {rounds:3, next:60, items:[{m:"dip", lo:10, hi:15, how:"vest on", work:40, rest:20},
+                             {m:"curl", lo:10, hi:15, how:"3s down", work:55, rest:20}]},
+  {rounds:3, items:[{m:"pushup", lo:10, hi:15, rest:20},
+                    {m:"reardelt", lo:12, hi:15, work:40, rest:20}]}
 ]};
 const WEEK = {
   1: PRESS_DAY,
@@ -81,15 +81,15 @@ const WEEK = {
   4: CHEST_DAY,
   5: PRESS_DAY,
   6: {name:"Tendon & legs", rir:[1,2], blocks:[
-    {rounds:3, next:40, items:[{m:"doorpress", rest:10},
-                               {m:"curl", lo:10, hi:15, how:"2s pause halfway, 3s down", work:90, rest:10}]},
+    {rounds:3, next:40, items:[{m:"doorpress", rest:20},
+                               {m:"curl", lo:10, hi:15, how:"3s down", work:55, rest:20}]},
     {rounds:3, items:[{m:"bss", lo:8, hi:12, how:"back foot on the step, bell at the chest", work:85, rest:60}]}
   ]},
   0: {name:"Push & jump", rir:[1,2], blocks:[
-    {rounds:4, next:45, items:[{m:"pushup", lo:10, hi:15, rest:15},
-                               {m:"reardelt", lo:12, hi:15, work:40, rest:15}]},
-    {rounds:4, items:[{m:"swing", lo:12, hi:15, how:"30s, every rep as hard and fast as you can", work:30, rest:10},
-                      {m:"calfraise", lo:8, hi:10, how:"edge of a step, 3s down, bell in hand", rest:10}]}
+    {rounds:3, next:60, items:[{m:"pushup", lo:10, hi:15, rest:20},
+                               {m:"reardelt", lo:12, hi:15, work:40, rest:20}]},
+    {rounds:3, items:[{m:"swing", lo:12, hi:15, how:"30s, every rep as hard and fast as you can", work:30, rest:20},
+                      {m:"calfraise", lo:8, hi:10, how:"edge of a step, 3s down, bell in hand", rest:20}]}
   ]}
 };
 
