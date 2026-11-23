@@ -2,7 +2,8 @@
 "use strict";
 
 /* Movements. `work` is the estimated seconds the set itself takes. It seeds the
-   clock, and your recalibrate taps correct it. `hold` marks isometric work that
+   clock and nothing corrects it, so set it from real set times (the gaps between
+   logged sets in an export). `hold` marks isometric work that
    is measured in seconds instead of reps. */
 const M = {
   press:    {short:"KB press",      name:"Half-kneeling one-arm press",             reps:"5–8",   lo:5,  hi:8,  side:"each arm", load:"16 kg",     work:70, def:6,  cue:"Bell in your right hand means right knee down. Press it straight up, ribs down, do not lean away from it. Lower it under control. Five on that side, then switch."},
@@ -62,17 +63,22 @@ const DEFAULT_RIR = [1,2], ONRAMP_RIR = [3,4];
    Saturday leave Sunday to recover, swings on Sunday barely leave you sore.
 
    No heavier bell, so the press, curl and overhead extension get harder by going
-   slower. The tempo is in `how`, and it is why their `work` is longer. */
+   slower. The tempo is in `how`, and it is why their `work` is longer.
+
+   Inside a pair, the switch to the second movement rests 25s and the rest that
+   closes the round 35s. Push-ups and dips are in the kitchen; the press, laterals
+   and rear delts in the office. Push-ups and rear delts cross the house, so they
+   rest 35s both ways. */
 const PRESS_DAY = {name:"Press & arms", rir:[1,2], blocks:[
-  {rounds:4, next:30, items:[{m:"press", lo:7, hi:10, how:"3s down", work:80, rest:30}]},
-  {rounds:3, items:[{m:"ohext", lo:12, hi:16, how:"3s down", work:65, rest:20},
-                    {m:"lateral", lo:8, hi:12, work:35, rest:20}]}
+  {rounds:4, next:45, items:[{m:"press", lo:7, hi:10, how:"3s down", work:110, rest:45}]},
+  {rounds:3, items:[{m:"ohext", lo:12, hi:16, how:"3s down", work:65, rest:25},
+                    {m:"lateral", lo:8, hi:12, work:35, rest:35}]}
 ]};
 const CHEST_DAY = {name:"Chest & arms", rir:[1,2], blocks:[
-  {rounds:3, next:60, items:[{m:"dip", lo:10, hi:15, how:"vest on", work:40, rest:20},
-                             {m:"curl", lo:10, hi:15, how:"3s down", work:55, rest:20}]},
-  {rounds:3, items:[{m:"pushup", lo:10, hi:15, rest:20},
-                    {m:"reardelt", lo:12, hi:15, work:40, rest:20}]}
+  {rounds:3, next:75, items:[{m:"dip", lo:10, hi:15, how:"vest on", work:40, rest:25},
+                             {m:"curl", lo:10, hi:15, how:"3s down", work:55, rest:35}]},
+  {rounds:3, items:[{m:"pushup", lo:10, hi:15, rest:35},
+                    {m:"reardelt", lo:12, hi:15, work:40, rest:35}]}
 ]};
 const WEEK = {
   1: PRESS_DAY,
@@ -81,15 +87,15 @@ const WEEK = {
   4: CHEST_DAY,
   5: PRESS_DAY,
   6: {name:"Tendon & legs", rir:[1,2], blocks:[
-    {rounds:3, next:40, items:[{m:"doorpress", rest:20},
-                               {m:"curl", lo:10, hi:15, how:"3s down", work:55, rest:20}]},
-    {rounds:3, items:[{m:"bss", lo:8, hi:12, how:"back foot on the step, bell at the chest", work:85, rest:60}]}
+    {rounds:3, next:55, items:[{m:"doorpress", rest:25},
+                               {m:"curl", lo:10, hi:15, how:"3s down", work:55, rest:35}]},
+    {rounds:3, items:[{m:"bss", lo:8, hi:12, how:"back foot on the step, bell at the chest", work:110, rest:90}]}
   ]},
   0: {name:"Push & jump", rir:[1,2], blocks:[
-    {rounds:3, next:60, items:[{m:"pushup", lo:10, hi:15, rest:20},
-                               {m:"reardelt", lo:12, hi:15, work:40, rest:20}]},
-    {rounds:3, items:[{m:"swing", lo:12, hi:15, how:"30s, every rep as hard and fast as you can", work:30, rest:20},
-                      {m:"calfraise", lo:8, hi:10, how:"edge of a step, 3s down, bell in hand", rest:20}]}
+    {rounds:3, next:75, items:[{m:"pushup", lo:10, hi:15, rest:35},
+                               {m:"reardelt", lo:12, hi:15, work:40, rest:35}]},
+    {rounds:3, items:[{m:"swing", lo:12, hi:15, how:"30s, every rep as hard and fast as you can", work:30, rest:25},
+                      {m:"calfraise", lo:8, hi:10, how:"edge of a step, 3s down, bell in hand", rest:35}]}
   ]}
 };
 
